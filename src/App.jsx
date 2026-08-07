@@ -8684,10 +8684,10 @@ function PublicSite({ onLogin, onApply, blocks, sessions, discountCodes, shopIte
         <h1 style={{ fontWeight:900, fontSize:"clamp(2.4rem,10vw,4.5rem)", lineHeight:0.92, textTransform:"uppercase", margin:"0 0 20px" }}>
           Train Hard.<br/><span style={{ color:C.red }}>Swim Faster.</span>
         </h1>
-        <p style={{ color:C.grey, maxWidth:380, lineHeight:1.7, marginBottom:32 }}>
+        <p style={{ color:C.grey, maxWidth:380, lineHeight:1.7, marginBottom:32, margin:"0 auto 32px" }}>
           Technique-led, data-driven squad sessions for swimmers chasing speed who want to see real progress.
         </p>
-        <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+        <div style={{ display:"flex", gap:10, flexWrap:"wrap", justifyContent:"center" }}>
           <button onClick={openApply} style={{ background:"#e01a1a", color:"#fff", padding:"10px 20px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", borderRadius:2, cursor:"pointer" }}>Apply for a Spot</button>
         </div>
       </section>
@@ -8706,10 +8706,10 @@ function PublicSite({ onLogin, onApply, blocks, sessions, discountCodes, shopIte
       <section id="sessions" style={{ padding:"48px 20px", borderBottom:"1px solid "+C.border }}>
         <span style={S.eyebrow}>What We Offer</span>
         <h2 style={{ fontWeight:900, fontSize:"1.8rem", textTransform:"uppercase", marginBottom:16 }}>What We Offer</h2>
-        <p style={{ color:C.grey, lineHeight:1.7, marginBottom:14, maxWidth:480 }}>
+        <p style={{ color:C.grey, lineHeight:1.7, maxWidth:480, margin:"0 auto 14px" }}>
           Technique-led, data-driven coaching designed to help you swim faster.
         </p>
-        <p style={{ color:C.grey, lineHeight:1.7, marginBottom:28, maxWidth:480 }}>
+        <p style={{ color:C.grey, lineHeight:1.7, maxWidth:480, margin:"0 auto 28px" }}>
           Every Friday you'll train with expert coaches in a structured, supportive environment focused on speed, efficiency and measurable progress.
         </p>
 
@@ -8752,10 +8752,10 @@ function PublicSite({ onLogin, onApply, blocks, sessions, discountCodes, shopIte
         <span style={S.eyebrow}>A Swim Faster London Programme</span>
         <h2 style={{ fontWeight:900, fontSize:"1.8rem", textTransform:"uppercase", marginBottom:6 }}>Project<span style={{ color:C.red }}>100</span></h2>
         <p style={{ color:C.amber, fontWeight:700, fontSize:13, letterSpacing:"0.06em", marginBottom:20 }}>Track it. Measure it. Improve it.</p>
-        <p style={{ color:C.grey, lineHeight:1.7, marginBottom:14, maxWidth:480 }}>
+        <p style={{ color:C.grey, lineHeight:1.7, maxWidth:480, margin:"0 auto 14px" }}>
           Project100 is our unique performance programme, built around regular 100m freestyle benchmarking. Monitor your progress, analyse your technique and race data, and see your improvements over time.
         </p>
-        <p style={{ color:C.grey, lineHeight:1.7, maxWidth:480 }}>
+        <p style={{ color:C.grey, lineHeight:1.7, maxWidth:480, margin:"0 auto" }}>
           Every benchmark brings you one step closer to your next personal best.
         </p>
       </section>
