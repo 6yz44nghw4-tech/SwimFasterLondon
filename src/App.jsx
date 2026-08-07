@@ -4535,7 +4535,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
 
   function addBenchmark() {
     if (!benchForm.memberId || !benchForm.time) return;
-    const mid = parseInt(benchForm.memberId);
+    const mid = benchForm.memberId;
     const wantSplits = benchForm.detailLevel === "splits" || benchForm.detailLevel === "full";
     const wantStrokes = benchForm.detailLevel === "full";
     const cleanSplits = wantSplits ? benchForm.splits.filter(function(s){ return s && s.trim(); }) : [];
@@ -6200,7 +6200,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
             </div>
 
             {reportingMemberId && (function() {
-              const rm = data.members.find(function(x) { return x.id === parseInt(reportingMemberId); });
+              const rm = data.members.find(function(x) { return x.id === reportingMemberId; });
               if (!rm) return null;
 
               return (
@@ -6234,8 +6234,8 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                         </div>
                         <button onClick={function(){
                           if (!feedbackSessionId || (!feedbackDraft.trim() && !feedbackAudio)) return;
-                          const s = data.sessions.find(function(x) { return x.id === parseInt(feedbackSessionId); });
-                          addSessionFeedback(rm.id, parseInt(feedbackSessionId), s ? s.date : "", feedbackDraft.trim(), feedbackAudio);
+                          const s = data.sessions.find(function(x) { return x.id === feedbackSessionId; });
+                          addSessionFeedback(rm.id, feedbackSessionId, s ? s.date : "", feedbackDraft.trim(), feedbackAudio);
                           setFeedbackDraft(""); setFeedbackSessionId(""); setFeedbackAudio(null);
                         }} style={S.btnRed}>Save feedback</button>
                       </div>
