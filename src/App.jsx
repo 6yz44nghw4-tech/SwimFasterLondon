@@ -4478,7 +4478,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   const [expandedShopItem, setExpandedShopItem] = useState(null);
   const [packForm, setPackForm] = useState({ memberMode:"existing", memberId:"", newName:"", newEmail:"", sessionsTotal:"10", pricePerSession:"", expiryWeeks:"12", discountCode:"" });
   const [justCreatedPackId, setJustCreatedPackId] = useState(null);
-  const [justRecordedBenchmark, setJustRecordedBenchmark] = useState(false);
+  const [benchmarkFeedback, setBenchmarkFeedback] = useState(null);
   const [editingPackId, setEditingPackId] = useState(null);
   const [editPackForm, setEditPackForm] = useState({ sessionsTotal:"", sessionsUsed:"", pricePerSession:"", expiryDate:"" });
   const [confirmDeletePackId, setConfirmDeletePackId] = useState(null);
@@ -4542,7 +4542,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
     const cleanSplits = wantSplits ? benchForm.splits.filter(function(s){ return s && s.trim(); }) : [];
     const cleanStrokes = wantStrokes ? benchForm.strokeCounts.filter(function(s){ return s && s.trim(); }).map(function(s){ return parseInt(s); }) : [];
     const entry = {
-      date: new Date(benchForm.date).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}),
+      date: benchForm.date,
       event: benchForm.event,
       time: benchForm.time,
       splits: cleanSplits.length > 0 ? benchForm.splits.slice(0, Math.max(1, Math.round((parseInt((benchForm.event.match(/^(\d+)m/)||[])[1]) || 0)/50))) : null,
@@ -4552,9 +4552,11 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
       split50: (benchForm.event==="100m Free" && wantSplits && benchForm.splits[0]) ? benchForm.splits[0] : null,
       startType: benchForm.startType || "push",
     };
-    api.addBenchmarkForMember(mid, entry).then(refreshData).then(function() {
-      setJustRecordedBenchmark(true);
-      setTimeout(function(){ setJustRecordedBenchmark(false); }, 4000);
+    api.addBenchmarkForMember(mid, entry).then(function(recorded) {
+      return refreshData().then(function() { return recorded; });
+    }).then(function(recorded) {
+      setBenchmarkFeedback(recorded ? "recorded" : "kept-existing");
+      setTimeout(function(){ setBenchmarkFeedback(null); }, 4000);
     }).catch(function(err) { window.alert("Couldn't add benchmark: " + err.message); });
     setBenchForm(function(f) { return Object.assign({}, f, { time:"", strokeCount1:"", strokeCount2:"", split50:"", splits:["","","","","","",""], strokeCounts:["","","","","","",""] }); }); // keep startType and detailLevel
   }
@@ -6116,8 +6118,11 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
               })()}
               <div style={{ display:"flex", alignItems:"center", gap:12 }}>
                 <button onClick={addBenchmark} style={S.btnRed}>Record time</button>
-                {justRecordedBenchmark && (
+                {benchmarkFeedback === "recorded" && (
                   <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:C.green }}>{"✓"} Time recorded</span>
+                )}
+                {benchmarkFeedback === "kept-existing" && (
+                  <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:C.amber }}>Kept existing faster time for this day</span>
                 )}
               </div>
             </div>

@@ -668,15 +668,20 @@ export async function deleteMember(memberId) {
 // Benchmarks / drills / race results / planned events
 // ---------------------------------------------------------------------------
 
+// Keeps only the fastest time per swimmer per event per calendar date -
+// multiple attempts in one session can all be submitted, only the quickest
+// sticks, and it never compares across different dates (see
+// upsert_best_benchmark in the DB). Returns true if this time was recorded,
+// false if a faster one already existed for that day and this was discarded.
 export async function addBenchmarkForMember(memberId, entry) {
-  const row = {
-    member_id: memberId, event: entry.event, time: entry.time,
-    date: new Date().toISOString().slice(0, 10), start_type: entry.startType || "push",
-    split_50: entry.split50 || null, stroke_count_1: entry.strokeCount1 || null, stroke_count_2: entry.strokeCount2 || null,
-    splits: entry.splits || null, stroke_counts: entry.strokeCounts || null,
-  };
-  const { error } = await supabase.from("benchmarks").insert(row);
+  const { data, error } = await supabase.rpc("upsert_best_benchmark", {
+    p_member_id: memberId, p_event: entry.event, p_date: entry.date, p_time: entry.time,
+    p_start_type: entry.startType || "push", p_split_50: entry.split50 || null,
+    p_stroke_count_1: entry.strokeCount1 || null, p_stroke_count_2: entry.strokeCount2 || null,
+    p_splits: entry.splits || null, p_stroke_counts: entry.strokeCounts || null,
+  });
   if (error) throw error;
+  return data;
 }
 
 export async function savePrescribedDrillsForMember(memberId, drills) {
