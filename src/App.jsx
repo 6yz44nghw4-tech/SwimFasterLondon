@@ -5403,7 +5403,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                     </div>
                     <div style={{ marginBottom:14 }}>
                       <label style={S.label}>Password</label>
-                      <input value={newCoachForm.password} onChange={function(e){ setNewCoachForm(function(f){ return Object.assign({}, f, { password:e.target.value }); }); }} placeholder="Set a password for them" style={S.input}/>
+                      <input type="password" autoComplete="new-password" value={newCoachForm.password} onChange={function(e){ setNewCoachForm(function(f){ return Object.assign({}, f, { password:e.target.value }); }); }} placeholder="Set a password for them" style={S.input}/>
                     </div>
                     <button onClick={function(){
                       if (!newCoachForm.name.trim() || !newCoachForm.email.trim() || !newCoachForm.password.trim()) return;
