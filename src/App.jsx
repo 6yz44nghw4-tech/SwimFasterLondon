@@ -5646,7 +5646,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                       <span style={{ fontSize:12, color:C.grey }}>Price:</span>
                       <span style={{ fontSize:14, color:C.amber, fontWeight:700 }}>{"\u00A3"}</span>
                       {isHeadCoach ? (
-                        <input type="number" value={b.priceFull} onChange={function(e){ updateBlockPrice(b.id, parseFloat(e.target.value)||0); }} style={{ width:80, background:"#161616", border:"1px solid #333", color:"#fff", padding:"6px 10px", fontSize:13, borderRadius:2, outline:"none" }}/>
+                        <input type="number" defaultValue={b.priceFull} key={b.id+"-"+b.priceFull} onBlur={function(e){ const next = parseFloat(e.target.value)||0; if (next !== b.priceFull) updateBlockPrice(b.id, next); }} style={{ width:80, background:"#161616", border:"1px solid #333", color:"#fff", padding:"6px 10px", fontSize:13, borderRadius:2, outline:"none" }}/>
                       ) : (
                         <span style={{ fontSize:14, color:C.white, fontWeight:700 }}>{b.priceFull}</span>
                       )}
@@ -6527,12 +6527,12 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
 
             <div style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, padding:16, marginBottom:20 }}>
               <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:C.grey, marginBottom:10 }}>Ordering deadline</div>
-              <input type="datetime-local" value={(data.pizzaDeadline||"").slice(0,16)} onChange={function(e){ api.updateClubSettings({ pizzaDeadline: e.target.value }).then(refreshData).catch(function(err) { window.alert("Couldn't update deadline: " + err.message); }); }} style={S.input}/>
+              <input type="datetime-local" defaultValue={(data.pizzaDeadline||"").slice(0,16)} key={"deadline-"+data.pizzaDeadline} onBlur={function(e){ if (e.target.value && e.target.value !== (data.pizzaDeadline||"").slice(0,16)) api.updateClubSettings({ pizzaDeadline: e.target.value }).then(refreshData).catch(function(err) { window.alert("Couldn't update deadline: " + err.message); }); }} style={S.input}/>
             </div>
 
             <div style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, padding:16, marginBottom:20 }}>
               <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:C.grey, marginBottom:10 }}>Delivery charge (split across the whole order)</div>
-              <input type="number" value={data.pizzaDeliveryFee||""} onChange={function(e){ api.updateClubSettings({ pizzaDeliveryFee: parseFloat(e.target.value)||0 }).then(refreshData).catch(function(err) { window.alert("Couldn't update fee: " + err.message); }); }} placeholder="e.g. 5.00" style={S.input}/>
+              <input type="number" defaultValue={data.pizzaDeliveryFee||""} key={"deliveryFee-"+data.pizzaDeliveryFee} onBlur={function(e){ const next = parseFloat(e.target.value)||0; if (next !== (data.pizzaDeliveryFee||0)) api.updateClubSettings({ pizzaDeliveryFee: next }).then(refreshData).catch(function(err) { window.alert("Couldn't update fee: " + err.message); }); }} placeholder="e.g. 5.00" style={S.input}/>
               <div style={{ fontSize:11, color:C.greyDark, marginTop:6 }}>Added once to the group total, not per person - covers whatever the delivery/collection fee ends up being.</div>
             </div>
 
