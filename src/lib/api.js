@@ -844,7 +844,10 @@ export async function updateCoachFields(coachId, camelFields) {
 export async function addAssistantCoach(name, email, password) {
   const authData = await signUp(email, password);
   if (!authData.user) throw new Error("Check the inbox for " + email + " to confirm the account before they can log in.");
-  const { error } = await supabase.from("coaches").insert({ name: name, email: email, subtitle: "Assistant Coach", role: "assistant", auth_user_id: authData.user.id });
+  // coaches.id is a plain text primary key with no default (unlike the
+  // uuid-keyed tables) - the original app generated its own ids for this
+  // ("c"+Date.now()), so this needs an explicit value too.
+  const { error } = await supabase.from("coaches").insert({ id: crypto.randomUUID(), name: name, email: email, subtitle: "Assistant Coach", role: "assistant", auth_user_id: authData.user.id });
   if (error) throw error;
 }
 
