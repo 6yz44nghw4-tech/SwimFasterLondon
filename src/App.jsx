@@ -5975,7 +5975,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                 if (!pairingSessionId) return null;
                 const sess = data.sessions.find(function(s){ return String(s.id)===String(pairingSessionId); });
                 if (!sess) return null;
-                const presentIds = Object.keys(sess.attendance||{}).filter(function(k){ return sess.attendance[k]; }).map(Number);
+                const presentIds = Object.keys(sess.attendance||{}).filter(function(k){ return sess.attendance[k]; });
                 if (presentIds.length === 0) return (
                   <div style={{ marginTop:14, fontSize:13, color:C.grey }}>No swimmers marked as attending yet. Use the Attendance button on the Calendar tab.</div>
                 );
