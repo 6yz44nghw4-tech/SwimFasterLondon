@@ -3649,7 +3649,7 @@ function RaceReportPage({ member, raceResults:initRaces, onSave }) {
   );
 }
 
-function HallOfRecords({ records, members, isCoach, onUpdate, currentMemberId }) {
+function HallOfRecords({ records, members, blocks, isCoach, onUpdate, currentMemberId }) {
   const [editing, setEditing] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [addForm, setAddForm] = useState({ event:"100m Free", holder:"", time:"", gender:"M", date:"2026-07-05" });
@@ -3696,12 +3696,19 @@ function HallOfRecords({ records, members, isCoach, onUpdate, currentMemberId })
     });
   });
 
-  const weekStart = new Date("2026-07-01");
-  const weekEnd   = new Date("2026-07-08");
-  const thisWeek  = free100.filter(function(e){ return e.parsed && e.parsed>=weekStart && e.parsed<weekEnd; });
-  const junEntries = free100.filter(function(e){ return e.parsed && e.parsed.getMonth()===5 && e.parsed.getFullYear()===2026; });
-  const weekSource = thisWeek.length > 0 ? thisWeek : junEntries;
-  const weekLabel  = thisWeek.length > 0 ? "This week" : "June 2026";
+  // Rolling last 7 days ending today, not a fixed calendar week - this used
+  // to be hardcoded to a specific week in July 2026, which meant it silently
+  // stopped matching any real data once that week passed. Falls back to
+  // all-time fastest (rather than a fixed stale month) if nobody's swum yet
+  // in the last 7 days.
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const todayStr = today.toISOString().slice(0,10);
+  const weekStart = new Date(today); weekStart.setDate(weekStart.getDate()-6);
+  const weekEndExclusive = new Date(today); weekEndExclusive.setDate(weekEndExclusive.getDate()+1);
+  const thisWeek  = free100.filter(function(e){ return e.parsed && e.parsed>=weekStart && e.parsed<weekEndExclusive; });
+  const weekSource = thisWeek.length > 0 ? thisWeek : free100;
+  const weekLabel  = thisWeek.length > 0 ? "This week" : "All-time";
 
   function topN(arr, g) {
     const byGender = arr.filter(function(e){ return e.gender===g; });
@@ -3728,8 +3735,15 @@ function HallOfRecords({ records, members, isCoach, onUpdate, currentMemberId })
   const weekTopM = allTopM.slice(0,3);
   const weekTopF = allTopF.slice(0,3);
 
-  const blockStart = new Date("2026-01-01");
-  const blockEnd   = new Date("2026-08-01");
+  // Scoped to the real current training block (from the coach's Blocks tab),
+  // not a fixed date range - this used to be hardcoded to Jan-Aug 2026,
+  // which silently excluded every benchmark logged after 1 Aug regardless
+  // of which block was actually running.
+  const activeBlock = (blocks||[]).find(function(b){ return b.startDate<=todayStr && todayStr<=b.endDate; })
+    || (blocks||[]).slice().sort(function(a,b){ return b.startDate.localeCompare(a.startDate); })[0]
+    || null;
+  const blockStart = activeBlock ? new Date(activeBlock.startDate) : new Date(today.getFullYear(),0,1);
+  const blockEnd   = activeBlock ? new Date(new Date(activeBlock.endDate).getTime()+86400000) : new Date(today.getTime()+86400000);
   const improvements = [];
   (members||[]).forEach(function(m) {
     const entries = free100.filter(function(e){ return e.name===m.name && e.parsed && e.parsed>=blockStart && e.parsed<blockEnd; }).sort(function(a,b){ return a.parsed-b.parsed; });
@@ -3835,14 +3849,14 @@ function HallOfRecords({ records, members, isCoach, onUpdate, currentMemberId })
 
       <div style={{ marginBottom:24 }}>
         <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", color:C.grey, marginBottom:10 }}>
-          Most improved 100m Free - this block
+          Most improved 100m Free - {activeBlock ? activeBlock.label : "this block"}
         </div>
         <div style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, overflow:"hidden" }}>
           <div style={{ padding:"8px 12px", background:"#052e16" }}>
             <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:C.green }}>Top improvements</div>
           </div>
           {top3Imp.length===0 ? (
-            <div style={{ padding:"14px 12px", fontSize:12, color:C.greyDark }}>Need at least 2 benchmarks per swimmer.</div>
+            <div style={{ padding:"14px 12px", fontSize:12, color:C.greyDark }}>Needs at least 2 recorded 100m Free times within {activeBlock ? activeBlock.label : "this block"} to show improvement - swimmers with only one time so far will appear here once they have a second.</div>
           ) : (
             top3Imp.map(function(e,i) {
               const isCurrent = e.name===currentName;
@@ -6347,7 +6361,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
 
 
         {tab === "drills" && <DrillLibraryPage isCoach={isHeadCoach} onUpdate={updateDrills} drills={data.drillLibrary || DRILLS_DATA}/>}
-        {tab === "records" && <HallOfRecords records={data.hallOfRecords || []} members={data.members} isCoach={true} onUpdate={updateHallOfRecords} currentMemberId={null}/>}
+        {tab === "records" && <HallOfRecords records={data.hallOfRecords || []} members={data.members} blocks={data.blocks || BLOCKS} isCoach={true} onUpdate={updateHallOfRecords} currentMemberId={null}/>}
 
         {tab === "notifications" && (
           <div>
@@ -7272,7 +7286,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
         )}
 
         {tab === "records" && (
-          <HallOfRecords records={allData.hallOfRecords || []} members={allData.members} isCoach={false} onUpdate={function(){}} currentMemberId={memberId}/>
+          <HallOfRecords records={allData.hallOfRecords || []} members={allData.members} blocks={allData.blocks || BLOCKS} isCoach={false} onUpdate={function(){}} currentMemberId={memberId}/>
         )}
 
         {tab === "messages" && (
