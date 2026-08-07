@@ -4478,6 +4478,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   const [expandedShopItem, setExpandedShopItem] = useState(null);
   const [packForm, setPackForm] = useState({ memberMode:"existing", memberId:"", newName:"", newEmail:"", sessionsTotal:"10", pricePerSession:"", expiryWeeks:"12", discountCode:"" });
   const [justCreatedPackId, setJustCreatedPackId] = useState(null);
+  const [justRecordedBenchmark, setJustRecordedBenchmark] = useState(false);
   const [editingPackId, setEditingPackId] = useState(null);
   const [editPackForm, setEditPackForm] = useState({ sessionsTotal:"", sessionsUsed:"", pricePerSession:"", expiryDate:"" });
   const [confirmDeletePackId, setConfirmDeletePackId] = useState(null);
@@ -4551,7 +4552,10 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
       split50: (benchForm.event==="100m Free" && wantSplits && benchForm.splits[0]) ? benchForm.splits[0] : null,
       startType: benchForm.startType || "push",
     };
-    api.addBenchmarkForMember(mid, entry).then(refreshData).catch(function(err) { window.alert("Couldn't add benchmark: " + err.message); });
+    api.addBenchmarkForMember(mid, entry).then(refreshData).then(function() {
+      setJustRecordedBenchmark(true);
+      setTimeout(function(){ setJustRecordedBenchmark(false); }, 4000);
+    }).catch(function(err) { window.alert("Couldn't add benchmark: " + err.message); });
     setBenchForm(function(f) { return Object.assign({}, f, { time:"", strokeCount1:"", strokeCount2:"", split50:"", splits:["","","","","","",""], strokeCounts:["","","","","","",""] }); }); // keep startType and detailLevel
   }
 
@@ -6057,7 +6061,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                 </div>
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
-                <div><label style={S.label}>Time (e.g. 58.4 or 1:02.1)</label><input value={benchForm.time} onChange={handleBenchTime} placeholder="58.4" style={S.input}/></div>
+                <div><label style={S.label}>Time (m:ss.hh, e.g. 58.40 or 1:02.10)</label><input value={benchForm.time} onChange={handleBenchTime} placeholder="0:58.40" style={S.input}/></div>
                 <div><label style={S.label}>Date</label><input type="date" value={benchForm.date} onChange={handleBenchDate} style={S.input}/></div>
               </div>
               <div style={{ marginBottom:12 }}>
@@ -6110,7 +6114,12 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                   </div>
                 );
               })()}
-              <button onClick={addBenchmark} style={S.btnRed}>Record time</button>
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <button onClick={addBenchmark} style={S.btnRed}>Record time</button>
+                {justRecordedBenchmark && (
+                  <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:C.green }}>{"✓"} Time recorded</span>
+                )}
+              </div>
             </div>
             {data.members.map(function(m) {
               const isOpen = expandedBenchMember === m.id;

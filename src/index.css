@@ -95,6 +95,15 @@ p {
   margin: 0;
 }
 
+/* Inputs across the app set color:#fff explicitly for typed text, which
+   browsers were also applying to the placeholder - making an empty field
+   look identical to one holding a real value. Force placeholders dimmed. */
+input::placeholder,
+textarea::placeholder {
+  color: #888;
+  opacity: 1;
+}
+
 code,
 .counter {
   font-family: var(--mono);
