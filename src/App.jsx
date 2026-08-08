@@ -4349,10 +4349,21 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   function sendCoachMessage(next) {
     const msg = next[next.length - 1];
     if (!msg) return;
-    api.sendMessage(msg.channel, String(msg.senderId), msg.senderName, msg.isCoach, msg.text).then(refreshData).catch(function(err) { window.alert("Couldn't send message: " + err.message); });
+    setData(function(d) { return Object.assign({}, d, { messages: next }); });
+    api.sendMessage(msg.channel, String(msg.senderId), msg.senderName, msg.isCoach, msg.text).then(refreshData).catch(function(err) { window.alert("Couldn't send message: " + err.message); refreshData(); });
   }
 
-  const unreadMsgCount = Math.max(0, (data.messages||[]).length - lastSeenMsgCount);
+  // As head coach, RLS lets this account see every message in every channel (for moderation) -
+  // the unread badge must only count messages from others, in a channel this coach is actually part of.
+  function messageIsUnreadByCoach(m) {
+    if (String(m.senderId) === String(coachId)) return false;
+    const chan = m.channel || "board";
+    if (chan === "board") return true;
+    const parts = chan.split(":");
+    return parts[1] === String(coachId) || parts[2] === String(coachId);
+  }
+  const coachUnseenMessages = (data.messages||[]).filter(messageIsUnreadByCoach);
+  const unreadMsgCount = Math.max(0, coachUnseenMessages.length - lastSeenMsgCount);
 
   function buildNotifications() {
     const items = [];
@@ -4740,7 +4751,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   function setTabDrills() { setTab("drills"); }
   function setTabRecords() { setTab("records"); }
   function setTabNotifications() { setTab("notifications"); }
-  function setTabMessages() { setTab("messages"); setLastSeenMsgCount((data.messages||[]).length); }
+  function setTabMessages() { setTab("messages"); setLastSeenMsgCount((data.messages||[]).filter(messageIsUnreadByCoach).length); }
   function setTabPizza() { setTab("pizza"); }
   function setTabCake() { setTab("cake"); }
   function setTabShop() { setTab("shop"); }
@@ -6649,7 +6660,8 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
     if (!refreshData) return;
     const msg = next[next.length - 1];
     if (!msg) return;
-    api.sendMessage(msg.channel, String(msg.senderId), msg.senderName, msg.isCoach, msg.text).then(refreshData).catch(function(err) { window.alert("Couldn't send message: " + err.message); });
+    if (setAllData) setAllData(function(d) { return Object.assign({}, d, { messages: next }); });
+    api.sendMessage(msg.channel, String(msg.senderId), msg.senderName, msg.isCoach, msg.text).then(refreshData).catch(function(err) { window.alert("Couldn't send message: " + err.message); refreshData(); });
   }
 
   const [lastSeenMsgCount, setLastSeenMsgCount] = useState(0);
