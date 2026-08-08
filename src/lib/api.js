@@ -37,6 +37,7 @@ function mapMember(m, related) {
     notifPrefs: m.notif_prefs || {},
     mustChangePassword: !!m.must_change_password,
     targetTime: m.target_time || null,
+    messagesSeenAt: m.messages_seen_at,
     benchmarks: (related.benchmarks || []).filter(function (b) { return b.member_id === m.id; }).map(mapBenchmark),
     raceResults: (related.raceResults || []).filter(function (r) { return r.member_id === m.id; }).map(mapRaceResult),
     plannedEvents: (related.plannedEvents || []).filter(function (e) { return e.member_id === m.id; }).map(mapPlannedEvent),
@@ -127,7 +128,7 @@ function mapGeneralComment(c) {
 }
 
 function mapCoach(c) {
-  return { id: c.id, authUserId: c.auth_user_id, name: c.name, subtitle: c.subtitle || "", email: c.email, role: c.role, photo: c.photo || null, bio: c.bio || "" };
+  return { id: c.id, authUserId: c.auth_user_id, name: c.name, subtitle: c.subtitle || "", email: c.email, role: c.role, photo: c.photo || null, bio: c.bio || "", messagesSeenAt: c.messages_seen_at };
 }
 
 function mapApplication(a) {
@@ -684,6 +685,21 @@ export async function addBenchmarkForMember(memberId, entry) {
   return data;
 }
 
+export async function updateBenchmark(benchmarkId, entry) {
+  const row = {
+    date: entry.date, event: entry.event, time: entry.time, start_type: entry.startType || "push",
+    split_50: entry.split50 || null, stroke_count_1: entry.strokeCount1 || null, stroke_count_2: entry.strokeCount2 || null,
+    splits: entry.splits || null, stroke_counts: entry.strokeCounts || null,
+  };
+  const { error } = await supabase.from("benchmarks").update(row).eq("id", benchmarkId);
+  if (error) throw error;
+}
+
+export async function deleteBenchmark(benchmarkId) {
+  const { error } = await supabase.from("benchmarks").delete().eq("id", benchmarkId);
+  if (error) throw error;
+}
+
 export async function savePrescribedDrillsForMember(memberId, drills) {
   const { error: delError } = await supabase.from("prescribed_drills").delete().eq("member_id", memberId);
   if (delError) throw delError;
@@ -751,6 +767,17 @@ export async function deletePlannedEvent(id) {
 export async function sendMessage(channel, senderId, senderName, isCoach, text) {
   const row = { channel: channel, sender_id: senderId, sender_name: senderName, is_coach: isCoach, text: text };
   const { error } = await supabase.from("messages").insert(row);
+  if (error) throw error;
+}
+
+// Persisted server-side (rather than local component state) so the
+// Messages tab badge doesn't reset to "everything unread" on every reload.
+export async function markCoachMessagesSeen(coachId) {
+  const { error } = await supabase.from("coaches").update({ messages_seen_at: new Date().toISOString() }).eq("id", coachId);
+  if (error) throw error;
+}
+export async function markMemberMessagesSeen(memberId) {
+  const { error } = await supabase.from("members").update({ messages_seen_at: new Date().toISOString() }).eq("id", memberId);
   if (error) throw error;
 }
 

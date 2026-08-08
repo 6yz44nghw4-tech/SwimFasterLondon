@@ -307,7 +307,7 @@ const S = {
 function Logo({ height }) {
   const h = height || 36;
   return (
-    <div style={{ display:"flex", flexDirection:"column", lineHeight:1, userSelect:"none" }}>
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", lineHeight:1, userSelect:"none", textAlign:"left" }}>
       <span style={{ fontFamily:"Georgia,serif", fontStyle:"italic", fontWeight:900, fontSize:h*0.52, color:"#fff", letterSpacing:"-0.02em" }}>
         Swim Faster
       </span>
@@ -4344,7 +4344,6 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   const currentCoach = (data.coaches||COACHES_DATA).find(function(c){ return c.id === coachId; }) || (data.coaches||COACHES_DATA)[0];
   const isHeadCoach = currentCoach.role === "head";
   const [readNotifIds, setReadNotifIds] = useState({});
-  const [lastSeenMsgCount, setLastSeenMsgCount] = useState(0);
 
   function sendCoachMessage(next) {
     const msg = next[next.length - 1];
@@ -4362,8 +4361,13 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
     const parts = chan.split(":");
     return parts[1] === String(coachId) || parts[2] === String(coachId);
   }
-  const coachUnseenMessages = (data.messages||[]).filter(messageIsUnreadByCoach);
-  const unreadMsgCount = Math.max(0, coachUnseenMessages.length - lastSeenMsgCount);
+  // Persisted on the coach row (not local state) so the badge survives a page reload
+  // instead of treating every message ever sent as newly unread on every fresh load.
+  const messagesSeenAt = currentCoach.messagesSeenAt;
+  const coachUnseenMessages = (data.messages||[]).filter(function(m) {
+    return messageIsUnreadByCoach(m) && (!messagesSeenAt || new Date(m.timestamp) > new Date(messagesSeenAt));
+  });
+  const unreadMsgCount = coachUnseenMessages.length;
 
   function buildNotifications() {
     const items = [];
@@ -4459,6 +4463,23 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   const [justDeletedIds, setJustDeletedIds] = useState([]);
   const [blockFilter, setBlockFilter] = useState("All");
   const [expandedBenchMember, setExpandedBenchMember] = useState(null);
+  const [editingBenchmark, setEditingBenchmark] = useState(null);
+  function startEditBenchmark(b) {
+    setEditingBenchmark({ id:b.id, date:b.date, event:b.event, time:b.time, startType:b.startType||"push" });
+  }
+  function cancelEditBenchmark() { setEditingBenchmark(null); }
+  function saveEditBenchmark() {
+    if (!editingBenchmark) return;
+    const eb = editingBenchmark;
+    api.updateBenchmark(eb.id, { date:eb.date, event:eb.event, time:eb.time, startType:eb.startType }).then(function() {
+      setEditingBenchmark(null);
+      return refreshData();
+    }).catch(function(err) { window.alert("Couldn't update benchmark: " + err.message); });
+  }
+  function deleteBenchmarkRow(b) {
+    if (!window.confirm("Delete this "+b.event+" time ("+b.time+" on "+b.date+")? This can't be undone.")) return;
+    api.deleteBenchmark(b.id).then(refreshData).catch(function(err) { window.alert("Couldn't delete benchmark: " + err.message); });
+  }
   const [drillAssignMember, setDrillAssignMember] = useState(null);
   const [viewingAsId, setViewingAsId] = useState(null);
   const [pairingSessionId, setPairingSessionId] = useState("");
@@ -4751,7 +4772,12 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   function setTabDrills() { setTab("drills"); }
   function setTabRecords() { setTab("records"); }
   function setTabNotifications() { setTab("notifications"); }
-  function setTabMessages() { setTab("messages"); setLastSeenMsgCount((data.messages||[]).filter(messageIsUnreadByCoach).length); }
+  function setTabMessages() {
+    setTab("messages");
+    const seenAt = new Date().toISOString();
+    setData(function(d) { return Object.assign({}, d, { coaches: (d.coaches||[]).map(function(c){ return c.id===coachId ? Object.assign({}, c, { messagesSeenAt: seenAt }) : c; }) }); });
+    api.markCoachMessagesSeen(coachId).catch(function(err) { console.error("Couldn't mark messages seen", err); });
+  }
   function setTabPizza() { setTab("pizza"); }
   function setTabCake() { setTab("cake"); }
   function setTabShop() { setTab("shop"); }
@@ -6096,13 +6122,37 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                         <div>
                           <div style={{ display:"flex", flexDirection:"column", gap:1, marginBottom:16 }}>
                             {m.benchmarks.slice().sort(function(a,b){ return b.date.localeCompare(a.date); }).map(function(b, i) {
+                              if (editingBenchmark && editingBenchmark.id === b.id) {
+                                const eb = editingBenchmark;
+                                return (
+                                  <div key={i} style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, padding:"10px" }}>
+                                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
+                                      <select value={eb.event} onChange={function(e){ setEditingBenchmark(Object.assign({}, eb, { event:e.target.value })); }} style={S.input}>
+                                        {["50m Free","100m Free","200m Free","400m Free","50m Back","100m Back","50m Breast","100m Breast","50m Fly","100m Fly","200m IM"].map(function(ev) { return <option key={ev} value={ev} style={{ background:C.panel }}>{ev}</option>; })}
+                                      </select>
+                                      <input value={eb.time} onChange={function(e){ setEditingBenchmark(Object.assign({}, eb, { time:e.target.value })); }} placeholder="0:58.40" style={S.input}/>
+                                      <input type="date" value={eb.date} onChange={function(e){ setEditingBenchmark(Object.assign({}, eb, { date:e.target.value })); }} style={S.input}/>
+                                      <select value={eb.startType} onChange={function(e){ setEditingBenchmark(Object.assign({}, eb, { startType:e.target.value })); }} style={S.input}>
+                                        <option value="push" style={{ background:C.panel }}>Push start</option>
+                                        <option value="block" style={{ background:C.panel }}>Dive start</option>
+                                      </select>
+                                    </div>
+                                    <div style={{ display:"flex", gap:8 }}>
+                                      <button onClick={saveEditBenchmark} style={S.btnGreen}>Save</button>
+                                      <button onClick={cancelEditBenchmark} style={S.btnGhost}>Cancel</button>
+                                    </div>
+                                  </div>
+                                );
+                              }
                               return (
-                                <div key={i} style={{ display:"flex", justifyContent:"space-between", background:C.bg, padding:"7px 10px", borderRadius:2 }}>
+                                <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:C.bg, padding:"7px 10px", borderRadius:2 }}>
                                   <span style={{ fontSize:12, color:EVENT_COLORS[b.event]||C.red }}>{b.event}</span>
-                                  <span style={{ display:"flex", gap:14 }}>
+                                  <span style={{ display:"flex", alignItems:"center", gap:14 }}>
                                     <strong style={{ color:C.white, fontSize:13, fontFamily:"monospace" }}>{b.time}</strong>
                                     <span style={{ fontSize:10, color:C.grey }}>({(b.startType||"push")==="block"?"Dive":"Push"})</span>
                                     <span style={{ fontSize:12, color:C.grey }}>{b.date}</span>
+                                    <button onClick={function(){ startEditBenchmark(b); }} style={{ background:"none", border:"none", color:"#3b82f6", fontSize:11, fontWeight:700, cursor:"pointer", padding:0 }}>Edit</button>
+                                    <button onClick={function(){ deleteBenchmarkRow(b); }} style={{ background:"none", border:"none", color:"#ff6b6b", fontSize:11, fontWeight:700, cursor:"pointer", padding:0 }}>Delete</button>
                                   </span>
                                 </div>
                               );
@@ -6664,8 +6714,16 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
     api.sendMessage(msg.channel, String(msg.senderId), msg.senderName, msg.isCoach, msg.text).then(refreshData).catch(function(err) { window.alert("Couldn't send message: " + err.message); refreshData(); });
   }
 
-  const [lastSeenMsgCount, setLastSeenMsgCount] = useState(0);
-  const unreadMsgCount = Math.max(0, (allData.messages||[]).filter(function(m){ return String(m.senderId)!==String(memberId); }).length - lastSeenMsgCount);
+  // Persisted on the member row (not local state) so the badge survives a page reload.
+  const memberMessagesSeenAt = member && member.messagesSeenAt;
+  const unreadMsgCount = (allData.messages||[]).filter(function(m){
+    return String(m.senderId)!==String(memberId) && (!memberMessagesSeenAt || new Date(m.timestamp) > new Date(memberMessagesSeenAt));
+  }).length;
+  function markMemberMessagesSeenNow() {
+    const seenAt = new Date().toISOString();
+    if (setAllData) setAllData(function(d) { return Object.assign({}, d, { members: (d.members||[]).map(function(m){ return m.id===memberId ? Object.assign({}, m, { messagesSeenAt: seenAt }) : m; }) }); });
+    api.markMemberMessagesSeen(memberId).catch(function(err) { console.error("Couldn't mark messages seen", err); });
+  }
 
   const [lastSeenNotifCount, setLastSeenNotifCount] = useState(0);
   function buildMyNotifications() {
@@ -6848,7 +6906,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
           <div ref={navBarRef} onScroll={function(e){ checkNavScroll(e.target); }} style={{ display:"flex", gap:0, marginTop:8, overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
             {TABS.map(function(t){
               return (
-                <button key={t[0]} onClick={function(){ setTab(t[0]); if(t[0]==="messages"){ setLastSeenMsgCount((allData.messages||[]).filter(function(m){ return String(m.senderId)!==String(memberId); }).length); } if(t[0]==="notifications"){ setLastSeenNotifCount(myNotifications.length); } }}
+                <button key={t[0]} onClick={function(){ setTab(t[0]); if(t[0]==="messages"){ markMemberMessagesSeenNow(); } if(t[0]==="notifications"){ setLastSeenNotifCount(myNotifications.length); } }}
                   style={{ background:"none", border:"none", borderBottom:tab===t[0] ? "2px solid "+C.red : "2px solid transparent", color:tab===t[0] ? C.white : C.grey, padding:"10px 12px 8px", fontSize:11, fontWeight:tab===t[0]?700:400, letterSpacing:"0.06em", textTransform:"uppercase", cursor:"pointer", whiteSpace:"nowrap", flexShrink:0 }}>
                   {t[1]}{t[0]==="messages" && unreadMsgCount > 0 && <span style={{ marginLeft:5, background:C.red, color:C.white, borderRadius:"50%", fontSize:9, fontWeight:900, padding:"1px 5px" }}>{unreadMsgCount}</span>}{t[0]==="notifications" && unreadNotifCount > 0 && <span style={{ marginLeft:5, background:C.red, color:C.white, borderRadius:"50%", fontSize:9, fontWeight:900, padding:"1px 5px" }}>{unreadNotifCount}</span>}
                 </button>
