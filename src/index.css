@@ -104,6 +104,18 @@ textarea::placeholder {
   opacity: 1;
 }
 
+/* Most inputs/selects here set an explicit fontSize under 16px, which makes
+   iOS Safari auto-zoom the whole page in on focus and back out on blur -
+   that zoom is the "window resizes when I tap a box" effect. Forcing 16px
+   (it beats an inline style only because of !important) stops the zoom
+   without touching the viewport meta tag, which would disable pinch-zoom
+   for everyone instead of just fixing this one quirk. */
+input,
+textarea,
+select {
+  font-size: 16px !important;
+}
+
 code,
 .counter {
   font-family: var(--mono);

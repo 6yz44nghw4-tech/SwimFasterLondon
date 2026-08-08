@@ -4100,7 +4100,7 @@ function MessagesPage({ currentUserId, currentUserName, isCoach, messages, membe
           </div>
         </div>
       ) : (
-        <div style={{ display:"flex", flexDirection:"column", height:"70vh" }}>
+        <div style={{ position:"fixed", inset:0, zIndex:50, display:"flex", flexDirection:"column", background:C.bg }}>
           <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 20px", borderBottom:"1px solid "+C.border, flexShrink:0 }}>
             <button onClick={backToList} style={{ background:"none", border:"none", color:C.red, fontSize:14, fontWeight:700, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:4 }}>{"<"} Back</button>
             <div style={{ flex:1, textAlign:"center", fontWeight:700, fontSize:15, color:C.white }}>
