@@ -6159,12 +6159,12 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                       ) : (
                         <div>
                           <div style={{ display:"flex", flexDirection:"column", gap:1, marginBottom:16 }}>
-                            {m.benchmarks.map(function(b, i) {
+                            {m.benchmarks.slice().sort(function(a,b){ return b.date.localeCompare(a.date); }).map(function(b, i) {
                               return (
                                 <div key={i} style={{ display:"flex", justifyContent:"space-between", background:C.bg, padding:"7px 10px", borderRadius:2 }}>
-                                  <span style={{ fontSize:12, color:C.greyLight }}>{b.event}</span>
+                                  <span style={{ fontSize:12, color:EVENT_COLORS[b.event]||C.red }}>{b.event}</span>
                                   <span style={{ display:"flex", gap:14 }}>
-                                    <strong style={{ color:EVENT_COLORS[b.event]||C.red, fontSize:13, fontFamily:"monospace" }}>{b.time}</strong>
+                                    <strong style={{ color:C.white, fontSize:13, fontFamily:"monospace" }}>{b.time}</strong>
                                     <span style={{ fontSize:10, color:C.grey }}>({(b.startType||"push")==="block"?"Dive":"Push"})</span>
                                     <span style={{ fontSize:12, color:C.grey }}>{b.date}</span>
                                   </span>
@@ -7061,17 +7061,17 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
                 {member.benchmarks.length === 0 ? (
                   <p style={{ color:C.grey }}>No benchmarks yet. Your coach will add them after sessions.</p>
                 ) : (
-                  member.benchmarks.map(function(b, i){
+                  member.benchmarks.slice().sort(function(a,b){ return b.date.localeCompare(a.date); }).map(function(b, i){
                     return (
                       <div key={i} style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, padding:"14px 16px", marginBottom:2 }}>
                         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, marginBottom: (b.strokeCount1||b.strokeCount2||b.split50) ? 10 : 0 }}>
                           <div>
-                            <div style={{ fontWeight:600, fontSize:14, marginBottom:2 }}>{b.event}</div>
+                            <div style={{ fontWeight:600, fontSize:14, marginBottom:2, color:EVENT_COLORS[b.event]||C.red }}>{b.event}</div>
                             <div style={{ fontSize:12, color:C.grey }}>{b.date}</div>
                           </div>
                           <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
                             <span style={{ fontSize:10, fontWeight:700, color:C.grey }}>({(b.startType||"push")==="block"?"Dive":"Push"})</span>
-                            <div style={{ fontWeight:900, fontSize:"1.4rem", color:EVENT_COLORS[b.event]||C.red, fontFamily:"monospace" }}>{b.time}</div>
+                            <div style={{ fontWeight:900, fontSize:"1.4rem", color:C.white, fontFamily:"monospace" }}>{b.time}</div>
                           </div>
                         </div>
                         {(b.strokeCount1 || b.strokeCount2 || b.split50) && (
