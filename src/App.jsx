@@ -3640,31 +3640,10 @@ function RaceReportPage({ member, raceResults:initRaces, onSave }) {
   );
 }
 
-function HallOfRecords({ records, members, blocks, isCoach, onUpdate, currentMemberId }) {
-  const [editing, setEditing] = useState(null);
-  const [editForm, setEditForm] = useState({});
-  const [addForm, setAddForm] = useState({ event:"100m Free", holder:"", time:"", gender:"M", date:"2026-07-05" });
-  const [showAdd, setShowAdd] = useState(false);
+function HallOfRecords({ members, blocks, isCoach, currentMemberId }) {
   const [expandedRec, setExpandedRec] = useState(null);
 
   const EVENTS = ["50m Free","100m Free","200m Free","400m Free","50m Back","100m Back","50m Breast","100m Breast","50m Fly","100m Fly","200m IM"];
-
-  function handleEditField(k, v) { setEditForm(function(f){ const u=Object.assign({},f); u[k]=v; return u; }); }
-  function handleAddField(k, v)  { setAddForm(function(f){ const u=Object.assign({},f); u[k]=v; return u; }); }
-  function startEdit(rec) { setEditing(rec.id); setEditForm({ event:rec.event, holder:rec.holder, time:rec.time, gender:rec.gender||"M", date:rec.date }); }
-  function cancelEdit() { setEditing(null); }
-  function saveEdit() {
-    onUpdate(records.map(function(r){ return r.id===editing ? { id:r.id, event:editForm.event, holder:editForm.holder, time:editForm.time, gender:editForm.gender, date:editForm.date } : r; }));
-    setEditing(null);
-  }
-  function saveAdd() {
-    if (!addForm.holder || !addForm.time) return;
-    onUpdate(records.concat([{ id:Date.now(), event:addForm.event, holder:addForm.holder, time:addForm.time, gender:addForm.gender, date:addForm.date }]));
-    setAddForm({ event:"100m Free", holder:"", time:"", gender:"M", date:"2026-07-05" });
-    setShowAdd(false);
-  }
-  function deleteRecord(rid) { onUpdate(records.filter(function(r){ return r.id!==rid; })); }
-  function toggleAdd() { setShowAdd(!showAdd); }
 
   function parseD(str) {
     if (!str) return null;
@@ -3751,8 +3730,21 @@ function HallOfRecords({ records, members, blocks, isCoach, onUpdate, currentMem
 
   const MEDAL = ["#f59e0b","#9ca3af","#cd7c39"];
 
-  const menRecs   = records.filter(function(r){ return (r.gender||"M")==="M"; });
-  const womenRecs = records.filter(function(r){ return (r.gender||"M")==="F"; });
+  // Club records aren't manually entered - each one is just whoever
+  // currently holds the fastest recorded benchmark time for that event,
+  // per gender. One row per event that has at least one time logged.
+  function bestRecordsForGender(g) {
+    const out = [];
+    EVENTS.forEach(function(ev) {
+      const top = top10ForRecord({ event:ev, gender:g });
+      if (top.length === 0) return;
+      const best = top[0];
+      out.push({ id:ev+"-"+g, event:ev, gender:g, holder:best.name, time:best.time, date:best.date, startType:best.startType });
+    });
+    return out;
+  }
+  const menRecs   = bestRecordsForGender("M");
+  const womenRecs = bestRecordsForGender("F");
 
   function top10ForRecord(rec) {
     const entries = [];
@@ -3880,35 +3872,8 @@ function HallOfRecords({ records, members, blocks, isCoach, onUpdate, currentMem
       </div>
 
       <div>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
-          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", color:C.grey }}>All-time club records</div>
-          {isCoach && <button onClick={toggleAdd} style={{ background:"#e01a1a", color:"#fff", padding:"6px 12px", fontWeight:700, fontSize:10, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", borderRadius:2, cursor:"pointer" }}>{showAdd?"Cancel":"+ Add"}</button>}
-        </div>
-
-        {isCoach && showAdd && (
-          <div style={{ background:C.panel, border:"1px solid #3b82f6", padding:14, borderRadius:2, marginBottom:12 }}>
-            <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#3b82f6", marginBottom:12 }}>New record</div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
-              <div><label style={S.label}>Event</label>
-                <select value={addForm.event} onChange={function(e){ handleAddField("event",e.target.value); }} style={S.input}>
-                  {EVENTS.map(function(ev){ return <option key={ev} value={ev} style={{background:C.panel}}>{ev}</option>; })}
-                </select>
-              </div>
-              <div><label style={S.label}>Gender</label>
-                <select value={addForm.gender} onChange={function(e){ handleAddField("gender",e.target.value); }} style={S.input}>
-                  <option value="M" style={{background:C.panel}}>Male</option>
-                  <option value="F" style={{background:C.panel}}>Female</option>
-                </select>
-              </div>
-            </div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, marginBottom:12 }}>
-              <div><label style={S.label}>Holder</label><input value={addForm.holder} onChange={function(e){ handleAddField("holder",e.target.value); }} placeholder="Name" style={S.input}/></div>
-              <div><label style={S.label}>Time</label><input value={addForm.time} onChange={function(e){ handleAddField("time",e.target.value); }} placeholder="58.4" style={S.input}/></div>
-              <div><label style={S.label}>Date</label><input type="date" value={addForm.date} onChange={function(e){ handleAddField("date",e.target.value); }} style={S.input}/></div>
-            </div>
-            <button onClick={saveAdd} style={S.btnRed}>Save</button>
-          </div>
-        )}
+        <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", color:C.grey, marginBottom:10 }}>All-time club records</div>
+        <div style={{ fontSize:12, color:C.greyDark, marginBottom:12 }}>Each record is simply the fastest time logged for that event - it updates automatically as new benchmarks come in.</div>
 
         {[["M","Men","#3b82f6","#0d1a2d",menRecs],["F","Women","#ec4899","#2d0a1a",womenRecs]].map(function(grp) {
           const gKey = grp[0];
@@ -3919,74 +3884,43 @@ function HallOfRecords({ records, members, blocks, isCoach, onUpdate, currentMem
           return (
             <div key={gKey} style={{ marginTop:gKey==="F"?16:0 }}>
               <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:gCol, padding:"6px 10px", background:gBg, borderRadius:2, marginBottom:6 }}>{gLabel}</div>
-              {recs.length===0 && <div style={{ fontSize:13, color:C.greyDark, padding:"8px 12px", marginBottom:8 }}>No records yet.</div>}
+              {recs.length===0 && <div style={{ fontSize:13, color:C.greyDark, padding:"8px 12px", marginBottom:8 }}>No times recorded yet.</div>}
               {recs.map(function(rec) {
                 const evCol = EVENT_COLORS[rec.event]||C.red;
                 const isOpen = expandedRec===rec.id;
                 return (
                   <div key={rec.id} style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, marginBottom:2 }}>
-                    {editing===rec.id ? (
-                      <div style={{ padding:12 }}>
-                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
-                          <div><label style={S.label}>Event</label>
-                            <select value={editForm.event} onChange={function(e){ handleEditField("event",e.target.value); }} style={S.input}>
-                              {EVENTS.map(function(ev){ return <option key={ev} value={ev} style={{background:C.panel}}>{ev}</option>; })}
-                            </select>
-                          </div>
-                          <div><label style={S.label}>Gender</label>
-                            <select value={editForm.gender} onChange={function(e){ handleEditField("gender",e.target.value); }} style={S.input}>
-                              <option value="M" style={{background:C.panel}}>Male</option>
-                              <option value="F" style={{background:C.panel}}>Female</option>
-                            </select>
-                          </div>
-                        </div>
-                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:12 }}>
-                          <div><label style={S.label}>Holder</label><input value={editForm.holder} onChange={function(e){ handleEditField("holder",e.target.value); }} style={S.input}/></div>
-                          <div><label style={S.label}>Time</label><input value={editForm.time} onChange={function(e){ handleEditField("time",e.target.value); }} style={S.input}/></div>
-                          <div><label style={S.label}>Date</label><input type="date" value={editForm.date} onChange={function(e){ handleEditField("date",e.target.value); }} style={S.input}/></div>
-                        </div>
-                        <div style={{ display:"flex", gap:8 }}>
-                          <button onClick={saveEdit} style={S.btnRed}>Save</button>
-                          <button onClick={cancelEdit} style={S.btnGhost}>Cancel</button>
-                          <button onClick={function(){ deleteRecord(rec.id); }} style={{ background:"transparent", border:"1px solid #7f1d1d", color:"#ff6b6b", padding:"10px 20px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:2, marginLeft:"auto" }}>Delete</button>
-                        </div>
+                    <div onClick={function(){ setExpandedRec(isOpen?null:rec.id); }} style={{ padding:"10px 12px", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
+                      <div style={{ width:3, background:evCol, alignSelf:"stretch", borderRadius:2, flexShrink:0 }}/>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:evCol }}>{rec.event}</div>
+                        <div style={{ fontWeight:700, fontSize:13, color:C.white }}>{displayNameByFullName(rec.holder, members)}</div>
+                        <div style={{ fontSize:11, color:C.grey }}>{rec.date}</div>
                       </div>
-                    ) : (
-                      <div>
-                        <div onClick={function(){ setExpandedRec(isOpen?null:rec.id); }} style={{ padding:"10px 12px", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
-                          <div style={{ width:3, background:evCol, alignSelf:"stretch", borderRadius:2, flexShrink:0 }}/>
-                          <div style={{ flex:1, minWidth:0 }}>
-                            <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:evCol }}>{rec.event}</div>
-                            <div style={{ fontWeight:700, fontSize:13, color:C.white }}>{displayNameByFullName(rec.holder, members)}</div>
-                            <div style={{ fontSize:11, color:C.grey }}>{rec.date}</div>
-                          </div>
-                          <div style={{ fontWeight:900, fontSize:15, color:C.white, fontFamily:"monospace", flexShrink:0 }}>{rec.time}</div>
-                          <div style={{ fontSize:11, color:C.grey, flexShrink:0 }}>{isOpen?"v":"+"}</div>
-                          {isCoach && <button onClick={function(e){ e.stopPropagation(); startEdit(rec); }} style={{ background:"transparent", border:"1px solid #333", color:"#bbb", padding:"4px 8px", fontWeight:700, fontSize:10, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:2, flexShrink:0 }}>Edit</button>}
+                      <div style={{ fontWeight:900, fontSize:15, color:C.white, fontFamily:"monospace", flexShrink:0 }}>{rec.time}</div>
+                      <div style={{ fontSize:11, color:C.grey, flexShrink:0 }}>{isOpen?"v":"+"}</div>
+                    </div>
+                    {isOpen && (function(){
+                      const top10 = top10ForRecord(rec);
+                      return (
+                        <div style={{ borderTop:"1px solid "+C.border, background:C.bg, padding:"8px 12px" }}>
+                          <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:evCol, marginBottom:8 }}>Top 10 - {rec.event}</div>
+                          {top10.length===0 && <div style={{ fontSize:12, color:C.greyDark }}>No times recorded.</div>}
+                          {top10.map(function(e,i){
+                            const mc = ["#f59e0b","#9ca3af","#cd7c39"];
+                            return (
+                              <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 0", borderBottom:i<top10.length-1?"1px solid "+C.border:"none" }}>
+                                <div style={{ fontSize:11, fontWeight:700, color:i<3?mc[i]:C.greyDark, minWidth:20, textAlign:"right" }}>{i+1}</div>
+                                <div style={{ flex:1, fontSize:13, color:i===0?C.white:C.greyLight, fontWeight:i===0?700:400 }}>{e.display}</div>
+                                <div style={{ fontSize:13, fontFamily:"monospace", color:i===0?evCol:C.greyLight, fontWeight:i===0?900:400, flexShrink:0 }}>{e.time}</div>
+                                <div style={{ fontSize:10, color:C.grey, flexShrink:0 }}>{e.startType==="block"?"Dive":"Push"}</div>
+                                <div style={{ fontSize:10, color:C.grey, minWidth:55, textAlign:"right", flexShrink:0 }}>{e.date}</div>
+                              </div>
+                            );
+                          })}
                         </div>
-                        {isOpen && (function(){
-                          const top10 = top10ForRecord(rec);
-                          return (
-                            <div style={{ borderTop:"1px solid "+C.border, background:C.bg, padding:"8px 12px" }}>
-                              <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:evCol, marginBottom:8 }}>Top 10 - {rec.event}</div>
-                              {top10.length===0 && <div style={{ fontSize:12, color:C.greyDark }}>No times recorded.</div>}
-                              {top10.map(function(e,i){
-                                const mc = ["#f59e0b","#9ca3af","#cd7c39"];
-                                return (
-                                  <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 0", borderBottom:i<top10.length-1?"1px solid "+C.border:"none" }}>
-                                    <div style={{ fontSize:11, fontWeight:700, color:i<3?mc[i]:C.greyDark, minWidth:20, textAlign:"right" }}>{i+1}</div>
-                                    <div style={{ flex:1, fontSize:13, color:i===0?C.white:C.greyLight, fontWeight:i===0?700:400 }}>{e.display}</div>
-                                    <div style={{ fontSize:13, fontFamily:"monospace", color:i===0?evCol:C.greyLight, fontWeight:i===0?900:400, flexShrink:0 }}>{e.time}</div>
-                                    <div style={{ fontSize:10, color:C.grey, flexShrink:0 }}>{e.startType==="block"?"Dive":"Push"}</div>
-                                    <div style={{ fontSize:10, color:C.grey, minWidth:55, textAlign:"right", flexShrink:0 }}>{e.date}</div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 );
               })}
