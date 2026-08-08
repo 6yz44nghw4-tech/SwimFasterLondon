@@ -175,17 +175,8 @@ const INIT = {
     { code:"WELCOME10", type:"percent", value:10, appliesTo:"block", active:true },
   ],
   // raceResults stored per member via member.raceResults
-  hallOfRecords: [
-    { id:1,  event:"100m Free",startType:"block",   holder:"James Thornton",   time:"58.4",   gender:"M", date:"27 Jun 2026" },
-    { id:2,  event:"200m Free",   holder:"Daniel Park",      time:"2:11.8", gender:"M", date:"27 Jun 2026" },
-    { id:3,  event:"50m Free",    holder:"Sarah Okafor",     time:"28.4",   gender:"F", date:"27 Jun 2026" },
-    { id:4,  event:"100m Back",   holder:"Chloe Fernandez",  time:"1:04.9", gender:"F", date:"27 Jun 2026" },
-    { id:5,  event:"100m Breast", holder:"Amara Diallo",     time:"1:16.9", gender:"F", date:"27 Jun 2026" },
-    { id:6,  event:"50m Fly",     holder:"Marcus Webb",      time:"27.6",   gender:"M", date:"27 Jun 2026" },
-    { id:7,  event:"100m Fly",    holder:"Fatima Al-Hassan", time:"1:08.4", gender:"F", date:"27 Jun 2026" },
-    { id:8,  event:"200m IM",     holder:"Ryan O'Connor",    time:"2:20.8", gender:"M", date:"27 Jun 2026" },
-    { id:9,  event:"400m Free",   holder:"Ben Adeyemi",      time:"4:58.2", gender:"M", date:"27 Jun 2026" },
-  ],
+  // hallOfRecords is not seeded here - the real list lives in Supabase and
+  // is populated by the coach via the "+ Add" button on the Records tab.
 };
 
 const INDUCTION = {
