@@ -6628,6 +6628,22 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
     setCompleteAppSubmitting(true);
     setCompleteAppError("");
     api.completeMemberApplication(memberId, formData).then(function() {
+      // Flip the gate immediately on the one write that actually matters (this
+      // is what un-gates the account), rather than waiting for refreshData's
+      // full ~20-table refetch to land before the screen moves anywhere. That
+      // full refetch can take a real few seconds on an actual mobile
+      // connection (invisible on localhost, where this always looked instant)
+      // - previously the "Submitting..." state sat through all of it, which
+      // read as a hang and led to reloading and resubmitting. The enrolment
+      // write and full refresh still happen right after, in the background.
+      if (setAllData) {
+        setAllData(function(d) {
+          return Object.assign({}, d, { members: (d.members||[]).map(function(m) {
+            if (m.id !== memberId) return m;
+            return Object.assign({}, m, { memberStatus:"approved", name:formData.name, email:formData.email, mobile:formData.mobile, dob:formData.dob, gender:formData.gender, emergencyName:formData.emergencyName, emergencyPhone:formData.emergencyPhone, level:formData.swimmerType, specialty:formData.strokeRank1, goals:formData.goals, competitions:formData.targetEvent, medicalNotes:formData.medical, bio:formData.goals });
+          }) });
+        });
+      }
       if (!enrolment) return;
       if (enrolment.type === "pack" && enrolment.packSessionCount) {
         const isDateTied = !!(enrolment.packSelectedSessionIds && enrolment.packSelectedSessionIds.length);
