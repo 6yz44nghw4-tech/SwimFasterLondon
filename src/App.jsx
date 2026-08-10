@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Component } from "react";
 import { supabase } from "./lib/supabaseClient";
 import * as api from "./lib/api";
 /*
@@ -319,6 +319,33 @@ function Badge({ color, label }) {
       {label}
     </span>
   );
+}
+
+class DashboardErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error: error };
+  }
+  componentDidCatch(error, info) {
+    console.error("Dashboard crashed:", error, info && info.componentStack);
+  }
+  render() {
+    if (this.state.error) {
+      const message = (this.state.error && this.state.error.message) || String(this.state.error);
+      return (
+        <div style={{ background:C.bg, minHeight:"100vh", color:C.white, fontFamily:"system-ui,sans-serif", padding:24, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center" }}>
+          <div style={{ fontWeight:900, fontSize:"1.3rem", textTransform:"uppercase", marginBottom:8 }}>Something went wrong</div>
+          <div style={{ color:C.grey, fontSize:13, marginBottom:16, maxWidth:420 }}>This screen hit an error and couldn't load. Reloading usually fixes it - if it keeps happening, send this to Henry.</div>
+          <div style={{ color:"#ff6b6b", fontSize:11, fontFamily:"monospace", background:"#1a0a0a", border:"1px solid #7f1d1d", borderRadius:2, padding:"10px 14px", marginBottom:20, maxWidth:480, wordBreak:"break-word" }}>{message}</div>
+          <button onClick={function(){ window.location.reload(); }} style={{ background:"#e01a1a", color:"#fff", border:"none", padding:"12px 20px", fontWeight:900, fontSize:12, letterSpacing:"0.06em", textTransform:"uppercase", borderRadius:2, cursor:"pointer" }}>Reload</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function Avatar({ name, size, photo }) {
@@ -5633,7 +5660,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                         return (m.blockEnrolments||[]).some(function(e) { return e.blockId===b.id || e.type==="year"; }) && m.memberStatus !== "pending" && m.memberStatus !== "rejected";
                       });
                       const pendingApps = data.applications.filter(function(a) {
-                        return a.status==="pending" && a.blockEnrolment && (a.blockEnrolment.blockId===b.id || a.blockEnrolment.type==="year");
+                        return a.status==="pending" && (a.blockEnrolmentBlockId===b.id || a.membershipType==="year");
                       });
                       if (signedUp.length===0 && pendingApps.length===0) return null;
                       const isExpanded = expandedBlockRoster === b.id;
@@ -8989,7 +9016,11 @@ export default function App() {
   }
 
   if (view === "coach") {
-    return <CoachDashboard onLogout={handleLogoutCoach} sharedData={data} setSharedData={setData} refreshData={refreshData} coachId={coachId}/>;
+    return (
+      <DashboardErrorBoundary>
+        <CoachDashboard onLogout={handleLogoutCoach} sharedData={data} setSharedData={setData} refreshData={refreshData} coachId={coachId}/>
+      </DashboardErrorBoundary>
+    );
   }
 
   if (view === "member") {
@@ -8997,13 +9028,15 @@ export default function App() {
       return <ForcePasswordChange memberId={memberId} onDone={function(){ setPasswordGate(false); }}/>;
     }
     return (
-      <MemberDashboard
-        memberId={memberId}
-        allData={data}
-        setAllData={setData}
-        refreshData={refreshData}
-        onLogout={handleLogoutMember}
-      />
+      <DashboardErrorBoundary>
+        <MemberDashboard
+          memberId={memberId}
+          allData={data}
+          setAllData={setData}
+          refreshData={refreshData}
+          onLogout={handleLogoutMember}
+        />
+      </DashboardErrorBoundary>
     );
   }
 
