@@ -6617,6 +6617,8 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
 
   function completeApplication(formData) {
     const enrolment = formData.blockEnrolment;
+    setCompleteAppSubmitting(true);
+    setCompleteAppError("");
     api.completeMemberApplication(memberId, formData).then(function() {
       if (!enrolment) return;
       if (enrolment.type === "pack" && enrolment.packSessionCount) {
@@ -6641,8 +6643,12 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
         });
       }
       return api.createBlockEnrolment(memberId, enrolment);
-    }).then(refreshData).catch(function(err) { window.alert("Couldn't complete application: " + err.message); });
-    setShowCompleteApp(false);
+    }).then(refreshData).then(function() {
+      setCompleteAppSubmitting(false);
+    }).catch(function(err) {
+      setCompleteAppSubmitting(false);
+      setCompleteAppError(err.message || "Couldn't complete application. Please try again.");
+    });
   }
 
   function setRaceResults(next) { setRaceResultsLocal(next); api.replaceRaceResults(memberId, next).then(refreshData).catch(function(err) { window.alert("Couldn't save race results: " + err.message); }); }
@@ -6785,6 +6791,8 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
   const needsCompleteApplication = member.memberStatus === "incomplete";
   const paymentLock = memberPaymentLockInfo(member, allData);
   const [testerStep, setTesterStep] = useState("welcome");
+  const [completeAppSubmitting, setCompleteAppSubmitting] = useState(false);
+  const [completeAppError, setCompleteAppError] = useState("");
 
   if (isPending) {
     return (
@@ -6856,7 +6864,11 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
           <h2 style={{ fontWeight:900, fontSize:"1.8rem", textTransform:"uppercase", marginBottom:8 }}>Just a Few Details</h2>
           <p style={{ color:C.grey, lineHeight:1.7, marginBottom:24 }}>Fill this in to get full access to your training plans, benchmarks, and everything else in the app.</p>
           <div style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, padding:20 }}>
-            <ApplicationForm onSubmit={completeApplication} blocks={allData.blocks||BLOCKS} sessions={allData.sessions||[]} discountCodes={allData.discountCodes||[]}/>
+            {completeAppError && <div style={{ background:"rgba(224,26,26,0.1)", border:"1px solid #e01a1a", color:"#ff6b6b", padding:"10px 12px", borderRadius:2, fontSize:13, marginBottom:16 }}>{completeAppError}</div>}
+            <fieldset disabled={completeAppSubmitting} style={{ border:"none", padding:0, margin:0, opacity:completeAppSubmitting?0.6:1 }}>
+              <ApplicationForm onSubmit={completeApplication} blocks={allData.blocks||BLOCKS} sessions={allData.sessions||[]} discountCodes={allData.discountCodes||[]}/>
+            </fieldset>
+            {completeAppSubmitting && <div style={{ textAlign:"center", fontSize:12, color:C.grey, marginTop:12 }}>Submitting...</div>}
           </div>
         </div>
       </div>
