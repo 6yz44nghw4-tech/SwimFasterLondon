@@ -2668,6 +2668,19 @@ function BlocksCalendarPage({ member, allData, onSignUp, onSetAttendanceIntent, 
     return isYearEnrolled || enrolledBlockIds.indexOf(blockId) !== -1;
   }
 
+  // A block membership and pay-as-you-go are two different ways of paying
+  // for the same sessions - letting both run at once just leads to a
+  // swimmer being billed twice for the same Friday, so only one can be
+  // active for a given member at a time.
+  const hasActiveBlockMembership = isYearEnrolled || enrolments.some(function(e) {
+    if (e.type !== "block") return false;
+    const b = blocks.find(function(x){ return x.id === e.blockId; });
+    return b && b.endDate >= todayStr;
+  });
+  const hasActivePayAsYouGo = (allData.sessionPacks||[]).some(function(p) {
+    return p.memberId === member.id && p.sessionsUsed < p.sessionsTotal && p.expiryDate >= todayStr;
+  });
+
   function sessionsForBlock(blockId) {
     const b = blocks.find(function(x) { return x.id===blockId; });
     if (!b) return [];
@@ -2817,8 +2830,13 @@ function BlocksCalendarPage({ member, allData, onSignUp, onSetAttendanceIntent, 
           <div style={{ marginBottom:24 }}>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
               <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:"#f59e0b" }}>Pay As You Go</div>
-              <button onClick={function(){ setShowBuyPack(!showBuyPack); }} style={{ background:"transparent", border:"1px solid #f59e0b", color:"#f59e0b", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"5px 10px", borderRadius:2, cursor:"pointer" }}>{showBuyPack ? "Cancel" : "+ Buy sessions"}</button>
+              {!hasActiveBlockMembership && (
+                <button onClick={function(){ setShowBuyPack(!showBuyPack); }} style={{ background:"transparent", border:"1px solid #f59e0b", color:"#f59e0b", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"5px 10px", borderRadius:2, cursor:"pointer" }}>{showBuyPack ? "Cancel" : "+ Buy sessions"}</button>
+              )}
             </div>
+            {hasActiveBlockMembership && (
+              <div style={{ fontSize:12, color:C.greyDark, marginBottom:12, lineHeight:1.6 }}>You're signed up for a block membership, so pay-as-you-go isn't available while that's active.</div>
+            )}
 
             {hasAnyPending && (
               <div id="payment-reminder" style={{ background:"#1a0a0a", border:"1px solid #7f1d1d", borderRadius:2, padding:"12px 14px", marginBottom:12 }}>
@@ -2936,7 +2954,9 @@ function BlocksCalendarPage({ member, allData, onSignUp, onSetAttendanceIntent, 
             </div>
             <div style={{ fontSize:12, color:C.grey, marginBottom:isEnrolled(currentBlock.id)?0:12 }}>{currentBlock.startDate} to {currentBlock.endDate}</div>
             {!isEnrolled(currentBlock.id) && (
-              confirmSignupBlock && confirmSignupBlock.id === currentBlock.id ? (
+              hasActivePayAsYouGo ? (
+                <div style={{ fontSize:12, color:C.greyDark, lineHeight:1.6 }}>You have active pay-as-you-go sessions, so block sign-up isn't available until those are used up.</div>
+              ) : confirmSignupBlock && confirmSignupBlock.id === currentBlock.id ? (
                 <div style={{ background:"#1a0a0a", border:"1px solid #7f1d1d", borderRadius:2, padding:"12px 14px", marginTop:8 }}>
                   <div style={{ fontSize:12, color:"#ff6b6b", marginBottom:8, fontWeight:700 }}>Sign up for {currentBlock.label} - {"\u00A3"}{discountedPrice(currentBlock).toFixed(2)}?</div>
                   <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
@@ -2978,6 +2998,8 @@ function BlocksCalendarPage({ member, allData, onSignUp, onSetAttendanceIntent, 
                           <span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:C.green, border:"1px solid #166534", padding:"2px 7px", borderRadius:1 }}>Signed up</span>
                           <span style={{ fontSize:13, color:C.grey }}>{isOpen?"-":"+"}</span>
                         </div>
+                      ) : b.isOpen && !confirming && hasActivePayAsYouGo ? (
+                        <span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:C.greyDark, flexShrink:0 }}>Pay-as-you-go active</span>
                       ) : b.isOpen && !confirming ? (
                         <button onClick={function(e){ e.stopPropagation(); requestSignup(b); }} style={{ background:"#e01a1a", color:"#fff", border:"none", padding:"7px 14px", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", borderRadius:2, cursor:"pointer", flexShrink:0 }}>Sign up - {"\u00A3"}{discountedPrice(b).toFixed(2)}</button>
                       ) : !b.isOpen ? (
