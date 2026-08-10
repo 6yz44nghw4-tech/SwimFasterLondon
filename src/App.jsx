@@ -6805,7 +6805,11 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
     items.sort(function(a,b){ return (b.sortKey||"").localeCompare(a.sortKey||""); });
     return items;
   }
-  const myNotifications = buildMyNotifications();
+  // member can be transiently missing from allData.members (e.g. mid-refetch
+  // after a background update) on a render before the "Member not found" guard
+  // below is reached - buildMyNotifications reads member.* unconditionally, so
+  // without this guard that render throws instead of falling through cleanly.
+  const myNotifications = member ? buildMyNotifications() : [];
   const unreadNotifCount = Math.max(0, myNotifications.length - lastSeenNotifCount);
 
 
@@ -7386,9 +7390,6 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
 
         {tab === "shop" && (
           <div>
-            <span style={S.eyebrow}>Kit &amp; Gear</span>
-            <h2 style={{ fontWeight:900, fontSize:"1.6rem", textTransform:"uppercase", marginBottom:4 }}>Shop</h2>
-            <p style={{ color:C.grey, fontSize:13, marginBottom:20 }}>Pre-loved and new swimming kit. Reserve an item and we'll be in touch to arrange payment and collection.</p>
             <ShopPage items={allData.shopItems||[]} onReserve={reserveShopItemAsMember} embedded={true} defaultName={member.name} defaultContact={member.email}/>
           </div>
         )}
