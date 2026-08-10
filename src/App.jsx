@@ -4258,8 +4258,8 @@ function LoginPage({ onSuccess, onBack }) {
       </div>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"calc(100vh - 53px)", padding:24 }}>
         <div style={{ width:"100%", maxWidth:360, textAlign:"center" }}>
-          <Logo height={110}/>
-          <h1 style={{ fontWeight:900, fontSize:"1.6rem", textTransform:"uppercase", margin:"28px 0 4px" }}>Login</h1>
+          <Logo height={190}/>
+          <h1 style={{ fontWeight:900, fontSize:"1.6rem", textTransform:"uppercase", margin:"36px 0 4px" }}>Login</h1>
           <p style={{ color:C.grey, fontSize:13, marginBottom:24 }}>Members and coaches use the same login.</p>
           <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
             <div>
