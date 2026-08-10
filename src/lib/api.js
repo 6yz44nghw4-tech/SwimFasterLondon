@@ -38,6 +38,7 @@ function mapMember(m, related) {
     mustChangePassword: !!m.must_change_password,
     targetTime: m.target_time || null,
     messagesSeenAt: m.messages_seen_at,
+    isTest: !!m.is_test,
     benchmarks: (related.benchmarks || []).filter(function (b) { return b.member_id === m.id; }).map(mapBenchmark),
     raceResults: (related.raceResults || []).filter(function (r) { return r.member_id === m.id; }).map(mapRaceResult),
     plannedEvents: (related.plannedEvents || []).filter(function (e) { return e.member_id === m.id; }).map(mapPlannedEvent),

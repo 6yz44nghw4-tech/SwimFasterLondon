@@ -3657,8 +3657,13 @@ function HallOfRecords({ members, blocks, isCoach, currentMemberId }) {
   const currentName = currentMember ? currentMember.name : null;
   const currentGender = currentMember ? (currentMember.gender||"M") : null;
 
+  // Test accounts (coach-only, used to try out the swimmer flow before a real
+  // swimmer logs in) never count toward club records or leaderboards, even
+  // for the coach viewing their own test data via "View as".
+  const recordMembers = (members||[]).filter(function(m){ return !m.isTest; });
+
   const free100 = [];
-  (members||[]).forEach(function(m) {
+  recordMembers.forEach(function(m) {
     (m.benchmarks||[]).forEach(function(b) {
       if (b.event !== "100m Free") return;
       const d = parseD(b.date);
@@ -3715,7 +3720,7 @@ function HallOfRecords({ members, blocks, isCoach, currentMemberId }) {
   const blockStart = activeBlock ? new Date(activeBlock.startDate) : new Date(today.getFullYear(),0,1);
   const blockEnd   = activeBlock ? new Date(new Date(activeBlock.endDate).getTime()+86400000) : new Date(today.getTime()+86400000);
   const improvements = [];
-  (members||[]).forEach(function(m) {
+  recordMembers.forEach(function(m) {
     const entries = free100.filter(function(e){ return e.name===m.name && e.parsed && e.parsed>=blockStart && e.parsed<blockEnd; }).sort(function(a,b){ return a.parsed-b.parsed; });
     if (entries.length < 2) return;
     const drop = entries[0].secs - entries[entries.length-1].secs;
@@ -3748,7 +3753,7 @@ function HallOfRecords({ members, blocks, isCoach, currentMemberId }) {
 
   function top10ForRecord(rec) {
     const entries = [];
-    (members||[]).forEach(function(m) {
+    recordMembers.forEach(function(m) {
       if ((m.gender||"M") !== (rec.gender||"M")) return;
       (m.benchmarks||[]).forEach(function(b) {
         if (b.event !== rec.event) return;
