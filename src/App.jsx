@@ -62,6 +62,8 @@ const SESSION_PACK_10 = { sessions:10, price:200 }; // £20/session
 const SESSION_PACK_PER_SESSION_PRICE = 25;
 const SPECIAL_PER_SESSION_RATES = {
   "ocparkes@gmail.com": 20, // Oliver's real email - his placeholder has been replaced now his real address is known
+  "tamsin@galeandhayes.co.uk": 15, // Tamsin
+  "shaojie27@gmail.com": 6, // Jet
 };
 
 function perSessionRateForEmail(email) {
