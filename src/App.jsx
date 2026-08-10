@@ -307,7 +307,7 @@ const S = {
 function Logo({ height }) {
   const h = height || 36;
   return (
-    <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", lineHeight:1, userSelect:"none", textAlign:"left" }}>
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", lineHeight:1, userSelect:"none" }}>
       <span style={{ fontFamily:"Georgia,serif", fontStyle:"italic", fontWeight:900, fontSize:h*0.52, color:"#fff", letterSpacing:"-0.02em" }}>
         Swim Faster
       </span>
