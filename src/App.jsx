@@ -6719,10 +6719,21 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
     api.sendMessage(msg.channel, String(msg.senderId), msg.senderName, msg.isCoach, msg.text).then(refreshData).catch(function(err) { window.alert("Couldn't send message: " + err.message); refreshData(); });
   }
 
+  // A member's own `messages` list is already scoped by RLS to channels they're
+  // actually part of, but board messages from before this member existed, or a
+  // stale local cache, could in principle include others' DMs - so scope
+  // explicitly here too, the same way the coach-side badge does.
+  function messageIsUnreadByMember(m) {
+    if (String(m.senderId) === String(memberId)) return false;
+    const chan = m.channel || "board";
+    if (chan === "board") return true;
+    const parts = chan.split(":");
+    return parts[1] === String(memberId) || parts[2] === String(memberId);
+  }
   // Persisted on the member row (not local state) so the badge survives a page reload.
   const memberMessagesSeenAt = member && member.messagesSeenAt;
   const unreadMsgCount = (allData.messages||[]).filter(function(m){
-    return String(m.senderId)!==String(memberId) && (!memberMessagesSeenAt || new Date(m.timestamp) > new Date(memberMessagesSeenAt));
+    return messageIsUnreadByMember(m) && (!memberMessagesSeenAt || new Date(m.timestamp) > new Date(memberMessagesSeenAt));
   }).length;
   function markMemberMessagesSeenNow() {
     const seenAt = new Date().toISOString();
