@@ -6935,7 +6935,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
                   a real swimmer must never see fabricated defaults (fake DOB,
                   gender, emergency contact) silently sitting in their own
                   safety-relevant fields. */}
-              <ApplicationForm onSubmit={completeApplication} blocks={allData.blocks||BLOCKS} sessions={allData.sessions||[]} discountCodes={allData.discountCodes||[]} initialValues={member.isTest ? completeAppInitialValues : undefined}/>
+              <ApplicationForm onSubmit={completeApplication} blocks={allData.blocks||BLOCKS} sessions={allData.sessions||[]} discountCodes={allData.discountCodes||[]} initialValues={member.isTest ? completeAppInitialValues : undefined} draftKey={"sfl_complete_profile_draft_"+member.id}/>
             </fieldset>
             {completeAppSubmitting && <div style={{ textAlign:"center", fontSize:12, color:C.grey, marginTop:12 }}>Submitting...</div>}
           </div>
@@ -7424,7 +7424,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
   );
 }
 
-function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialValues }) {
+function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialValues, draftKey }) {
   const EMPTY = {
     name:"", email:"", mobile:"", dob:"", gender:"",
     password:"", confirmPassword:"",
@@ -7437,13 +7437,74 @@ function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialVal
     membershipType:"block", selectedBlockId:"", discountCodeInput:"", privacyConsent:false,
     packType:"persession", selectedSessionDates:[],
   };
-  const [step, setStep] = useState(0);
+  // A refresh or an accidental browser-back used to wipe the whole form back
+  // to step 1 with nothing saved - this mirrors step/answers into
+  // sessionStorage (never the password, which is dropped from what's saved
+  // and just re-asked for) so reloading the same tab picks up where it left
+  // off instead of losing everything already filled in.
+  const draft = (function() {
+    if (!draftKey || typeof window === "undefined") return null;
+    try {
+      const raw = window.sessionStorage.getItem(draftKey);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  })();
+  const [step, setStep] = useState(function() {
+    if (!draft) return 0;
+    // Password is never persisted, so never resume past the step that
+    // collects it - otherwise Review/Submit could fire with a blank password.
+    return draft.form && draft.form.password ? draft.step : Math.min(draft.step, 1);
+  });
   // initialValues lets a caller pre-fill the form (used only for the
   // "Complete Your Profile" test-swimmer flow, so re-testing submission
   // doesn't mean re-typing all seven steps every time) - the public
   // "Apply for a Spot" signup never passes this, so real applicants still
   // always start from a blank form.
-  const [form, setForm] = useState(function() { return Object.assign({}, EMPTY, initialValues||{}); });
+  const [form, setForm] = useState(function() {
+    const base = Object.assign({}, EMPTY, initialValues||{});
+    return draft ? Object.assign({}, base, draft.form) : base;
+  });
+
+  useEffect(function() {
+    if (!draftKey || typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(draftKey, JSON.stringify({ step: step, form: Object.assign({}, form, { password:"", confirmPassword:"" }) }));
+    } catch (e) { /* storage full/unavailable - draft persistence is a convenience, not required */ }
+  }, [step, form, draftKey]);
+
+  // The form has no routing of its own, so the physical/browser back button
+  // previously just left the whole app (back to whatever page was open
+  // before) instead of stepping back within the form, the way the in-app
+  // Back button does. Tagging each step as its own history entry lets the
+  // browser's back/forward buttons walk through steps the same way; only
+  // once you're back at step 1 does back-again leave the page, which is the
+  // expected point for a real "go back" gesture to take over.
+  const historyInitedRef = useRef(false);
+  useEffect(function() {
+    if (typeof window === "undefined") return;
+    if (!historyInitedRef.current) {
+      historyInitedRef.current = true;
+      window.history.replaceState({ sflFormStep: step }, "");
+      return;
+    }
+    if (!(window.history.state && window.history.state.sflFormStep === step)) {
+      window.history.pushState({ sflFormStep: step }, "");
+    }
+  }, [step]);
+  useEffect(function() {
+    if (typeof window === "undefined") return;
+    function onPopState(e) {
+      const s = e.state && e.state.sflFormStep;
+      if (typeof s === "number") setStep(s);
+    }
+    window.addEventListener("popstate", onPopState);
+    return function() { window.removeEventListener("popstate", onPopState); };
+  }, []);
+
+  function clearDraft() {
+    if (!draftKey || typeof window === "undefined") return;
+    try { window.sessionStorage.removeItem(draftKey); } catch (e) {}
+  }
 
   const STEPS = ["Try the benchmark","Your details","Swimming background","Current ability","Membership","Goals & health","Review"];
 
@@ -7608,6 +7669,7 @@ function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialVal
       paymentStatus: "pending",
       signedUpDate: new Date().toISOString().slice(0,10),
     };
+    clearDraft();
     onSubmit(Object.assign({}, form, { blockEnrolment: enrolment }));
   }
 
@@ -8749,7 +8811,7 @@ function PublicSite({ onLogin, onApply, blocks, sessions, discountCodes, shopIte
             <div style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, padding:20 }}>
               {applyError && <div style={{ background:"rgba(224,26,26,0.1)", border:"1px solid #e01a1a", color:"#ff6b6b", padding:"10px 12px", borderRadius:2, fontSize:13, marginBottom:16 }}>{applyError}</div>}
               <fieldset disabled={applySubmitting} style={{ border:"none", padding:0, margin:0, opacity:applySubmitting?0.6:1 }}>
-                <ApplicationForm onSubmit={handleSubmit} blocks={blocks||BLOCKS} sessions={sessions||[]} discountCodes={discountCodes||[]}/>
+                <ApplicationForm onSubmit={handleSubmit} blocks={blocks||BLOCKS} sessions={sessions||[]} discountCodes={discountCodes||[]} draftKey="sfl_apply_draft"/>
               </fieldset>
             </div>
           )}
