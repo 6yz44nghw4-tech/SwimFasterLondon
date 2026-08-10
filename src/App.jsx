@@ -6858,6 +6858,24 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
   }
 
   if (needsCompleteApplication) {
+    // Pre-fill from whatever's already on the member record, plus the same
+    // sensible defaults used throughout testing for anything that isn't
+    // persisted anywhere yet (times/week, stroke ranking, membership choice) -
+    // so re-testing the submit flow is just "click through and hit submit"
+    // instead of retyping seven steps every time.
+    const completeAppBlocks = allData.blocks || BLOCKS;
+    const completeAppBestFree100 = (member.benchmarks||[]).filter(function(b){ return b.event==="100m Free"; }).sort(function(a,b){ return toSeconds(a.time)-toSeconds(b.time); })[0];
+    const completeAppInitialValues = {
+      name: member.name || "", email: member.email || "",
+      mobile: member.mobile || "07700900000", dob: member.dob || "1995-01-01", gender: member.gender || "M",
+      emergencyName: member.emergencyName || "Emergency Contact", emergencyPhone: member.emergencyPhone || "07700900001",
+      swimmerType: member.level || "Pool", timesPerWeek: "3", swimmingSince: "1-3 years",
+      pb100: completeAppBestFree100 ? completeAppBestFree100.time : "1:30.0",
+      strokeRank1: member.specialty || "Freestyle", strokeRank2: "Backstroke", strokeRank3: "Breaststroke", strokeRank4: "Butterfly",
+      benchmarkResponse: "confident",
+      goals: member.goals || "", targetEvent: member.competitions || "", medical: member.medicalNotes || "",
+      membershipType: "block", selectedBlockId: completeAppBlocks.length ? completeAppBlocks[0].id : "",
+    };
     if (testerStep === "welcome") {
       return (
         <div style={{ background:C.bg, color:C.white, fontFamily:"system-ui,sans-serif", fontSize:14, minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", padding:"32px 20px" }}>
@@ -6893,7 +6911,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
           <div style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, padding:20 }}>
             {completeAppError && <div style={{ background:"rgba(224,26,26,0.1)", border:"1px solid #e01a1a", color:"#ff6b6b", padding:"10px 12px", borderRadius:2, fontSize:13, marginBottom:16 }}>{completeAppError}</div>}
             <fieldset disabled={completeAppSubmitting} style={{ border:"none", padding:0, margin:0, opacity:completeAppSubmitting?0.6:1 }}>
-              <ApplicationForm onSubmit={completeApplication} blocks={allData.blocks||BLOCKS} sessions={allData.sessions||[]} discountCodes={allData.discountCodes||[]}/>
+              <ApplicationForm onSubmit={completeApplication} blocks={allData.blocks||BLOCKS} sessions={allData.sessions||[]} discountCodes={allData.discountCodes||[]} initialValues={completeAppInitialValues}/>
             </fieldset>
             {completeAppSubmitting && <div style={{ textAlign:"center", fontSize:12, color:C.grey, marginTop:12 }}>Submitting...</div>}
           </div>
@@ -7385,7 +7403,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
   );
 }
 
-function ApplicationForm({ onSubmit, blocks, sessions, discountCodes }) {
+function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialValues }) {
   const EMPTY = {
     name:"", email:"", mobile:"", dob:"", gender:"",
     password:"", confirmPassword:"",
@@ -7399,7 +7417,12 @@ function ApplicationForm({ onSubmit, blocks, sessions, discountCodes }) {
     packType:"persession", selectedSessionDates:[],
   };
   const [step, setStep] = useState(0);
-  const [form, setForm] = useState(EMPTY);
+  // initialValues lets a caller pre-fill the form (used only for the
+  // "Complete Your Profile" test-swimmer flow, so re-testing submission
+  // doesn't mean re-typing all seven steps every time) - the public
+  // "Apply for a Spot" signup never passes this, so real applicants still
+  // always start from a blank form.
+  const [form, setForm] = useState(function() { return Object.assign({}, EMPTY, initialValues||{}); });
 
   const STEPS = ["Try the benchmark","Your details","Swimming background","Current ability","Membership","Goals & health","Review"];
 
