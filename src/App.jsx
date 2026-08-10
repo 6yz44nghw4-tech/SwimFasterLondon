@@ -307,20 +307,7 @@ const S = {
 function Logo({ height }) {
   const h = height || 36;
   return (
-    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", lineHeight:1, userSelect:"none" }}>
-      <span style={{ fontFamily:"Georgia,serif", fontStyle:"italic", fontWeight:900, fontSize:h*0.52, color:"#fff", letterSpacing:"-0.02em" }}>
-        Swim Faster
-      </span>
-      <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:2 }}>
-        <svg width={h*0.85} height={5} viewBox="0 0 50 5">
-          <path d="M0 4 Q25 1 50 0" stroke="#e01a1a" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-          <path d="M0 4 Q25 3 50 2" stroke="#e01a1a" strokeWidth="1.6" fill="none" strokeLinecap="round" opacity="0.6"/>
-        </svg>
-        <span style={{ fontFamily:"Arial,sans-serif", fontWeight:700, fontSize:h*0.17, letterSpacing:"0.2em", color:"#fff", textTransform:"uppercase" }}>
-          London
-        </span>
-      </div>
-    </div>
+    <img src="/logo.png" alt="Swim Faster London" style={{ height:h, width:"auto", display:"block", userSelect:"none" }}/>
   );
 }
 
@@ -4270,8 +4257,8 @@ function LoginPage({ onSuccess, onBack }) {
         </button>
       </div>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"calc(100vh - 53px)", padding:24 }}>
-        <div style={{ width:"100%", maxWidth:360 }}>
-          <Logo height={44}/>
+        <div style={{ width:"100%", maxWidth:360, textAlign:"center" }}>
+          <Logo height={110}/>
           <h1 style={{ fontWeight:900, fontSize:"1.6rem", textTransform:"uppercase", margin:"28px 0 4px" }}>Login</h1>
           <p style={{ color:C.grey, fontSize:13, marginBottom:24 }}>Members and coaches use the same login.</p>
           <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
