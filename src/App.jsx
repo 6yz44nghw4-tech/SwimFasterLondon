@@ -6915,7 +6915,11 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
           <div style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, padding:20 }}>
             {completeAppError && <div style={{ background:"rgba(224,26,26,0.1)", border:"1px solid #e01a1a", color:"#ff6b6b", padding:"10px 12px", borderRadius:2, fontSize:13, marginBottom:16 }}>{completeAppError}</div>}
             <fieldset disabled={completeAppSubmitting} style={{ border:"none", padding:0, margin:0, opacity:completeAppSubmitting?0.6:1 }}>
-              <ApplicationForm onSubmit={completeApplication} blocks={allData.blocks||BLOCKS} sessions={allData.sessions||[]} discountCodes={allData.discountCodes||[]} initialValues={completeAppInitialValues}/>
+              {/* Pre-fill only applies to coach-created test accounts (is_test) -
+                  a real swimmer must never see fabricated defaults (fake DOB,
+                  gender, emergency contact) silently sitting in their own
+                  safety-relevant fields. */}
+              <ApplicationForm onSubmit={completeApplication} blocks={allData.blocks||BLOCKS} sessions={allData.sessions||[]} discountCodes={allData.discountCodes||[]} initialValues={member.isTest ? completeAppInitialValues : undefined}/>
             </fieldset>
             {completeAppSubmitting && <div style={{ textAlign:"center", fontSize:12, color:C.grey, marginTop:12 }}>Submitting...</div>}
           </div>
