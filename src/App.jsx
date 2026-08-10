@@ -2694,8 +2694,18 @@ function BlocksCalendarPage({ member, allData, onSignUp, onSetAttendanceIntent, 
   }
 
   function upcomingFridaySessionsForMember() {
+    // Exclude Fridays already covered by one of this member's own packs -
+    // pending as well as confirmed, since an unpaid pending purchase already
+    // reserves that date and letting it be bought again just creates a
+    // second (confusing, easy to double-pay) charge for the same session.
+    const alreadyCoveredIds = {};
+    (allData.sessionPacks||[]).forEach(function(p) {
+      if (p.memberId === member.id && p.allowedSessionIds) {
+        p.allowedSessionIds.forEach(function(sid) { alreadyCoveredIds[sid] = true; });
+      }
+    });
     return sessions
-      .filter(function(s) { return s.date >= todayStr && s.status !== "cancelled"; })
+      .filter(function(s) { return s.date >= todayStr && s.status !== "cancelled" && !alreadyCoveredIds[s.id]; })
       .sort(function(a,b) { return a.date.localeCompare(b.date); });
   }
 
@@ -2811,7 +2821,7 @@ function BlocksCalendarPage({ member, allData, onSignUp, onSetAttendanceIntent, 
             </div>
 
             {hasAnyPending && (
-              <div style={{ background:"#1a0a0a", border:"1px solid #7f1d1d", borderRadius:2, padding:"12px 14px", marginBottom:12 }}>
+              <div id="payment-reminder" style={{ background:"#1a0a0a", border:"1px solid #7f1d1d", borderRadius:2, padding:"12px 14px", marginBottom:12 }}>
                 <div style={{ fontWeight:700, fontSize:13, color:"#ff6b6b", marginBottom:4 }}>Payment reminder</div>
                 <div style={{ fontSize:12, color:"#ffb4b4", lineHeight:1.6 }}>You have {pendingPacks.length + pendingEnrolments.length} purchase{(pendingPacks.length+pendingEnrolments.length)!==1?"s":""} awaiting payment confirmation. Please pay by bank transfer using the details below - your coach will confirm once received.</div>
                 <div style={{ fontSize:12, color:"#ccc", lineHeight:1.8, marginTop:8 }}>
@@ -7030,7 +7040,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
           const count = pendingPacks.length + pendingEnrolments.length;
           if (count === 0) return null;
           return (
-            <div onClick={function(){ setTab("calendar"); }} style={{ background:"#1a1205", border:"1px solid #78350f", borderRadius:2, padding:"12px 16px", marginBottom:16, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+            <div onClick={function(){ setTab("calendar"); setTimeout(function(){ const el = document.getElementById("payment-reminder"); if (el) el.scrollIntoView({ behavior:"smooth", block:"center" }); }, 50); }} style={{ background:"#1a1205", border:"1px solid #78350f", borderRadius:2, padding:"12px 16px", marginBottom:16, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
               <div style={{ fontSize:13, color:"#f59e0b", fontWeight:700 }}>{"\u26A0"} You have {count} payment{count!==1?"s":""} awaiting confirmation - tap to view and pay</div>
               <span style={{ fontSize:13, color:"#f59e0b" }}>{"\u203A"}</span>
             </div>
