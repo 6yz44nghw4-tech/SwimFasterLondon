@@ -4258,7 +4258,7 @@ function LoginPage({ onSuccess, onBack }) {
       </div>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"calc(100vh - 53px)", padding:24 }}>
         <div style={{ width:"100%", maxWidth:360, textAlign:"center" }}>
-          <Logo height={190}/>
+          <div style={{ marginLeft:24 }}><Logo height={210}/></div>
           <h1 style={{ fontWeight:900, fontSize:"1.6rem", textTransform:"uppercase", margin:"36px 0 4px" }}>Login</h1>
           <p style={{ color:C.grey, fontSize:13, marginBottom:24 }}>Members and coaches use the same login.</p>
           <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
@@ -5088,7 +5088,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
       <nav style={{ background:C.panel, borderBottom:"1px solid "+C.border, padding:"0 20px" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingTop:12 }}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            <Logo height={30}/>
+            <Logo height={44}/>
             <span style={{ fontSize:10, fontWeight:700, letterSpacing:"0.15em", textTransform:"uppercase", color:C.amber, border:"1px solid "+C.amber, padding:"2px 8px", borderRadius:1 }}>Coach</span>
           </div>
           <button onClick={handleLogout} style={{ background:"none", border:"none", color:C.grey, fontSize:12, cursor:"pointer", textTransform:"uppercase", letterSpacing:"0.08em" }}>Sign Out</button>
@@ -6816,7 +6816,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
     return (
       <div style={{ background:C.bg, minHeight:"100vh", fontFamily:"system-ui,sans-serif", color:C.white }}>
         <nav style={{ background:C.panel, borderBottom:"1px solid "+C.border, padding:"12px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <Logo height={30}/>
+          <Logo height={44}/>
           <button onClick={onLogout} style={{ background:"none", border:"none", color:C.grey, fontSize:12, cursor:"pointer", letterSpacing:"0.08em", textTransform:"uppercase" }}>Sign Out</button>
         </nav>
         <div style={{ padding:"32px 20px 60px", maxWidth:520, margin:"0 auto" }}>
@@ -6872,7 +6872,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
         <div style={{ background:C.bg, color:C.white, fontFamily:"system-ui,sans-serif", fontSize:14, minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", padding:"32px 20px" }}>
           <div style={{ maxWidth:480, width:"100%" }}>
             <div style={{ display:"flex", justifyContent:"center", marginBottom:24 }}>
-              <Logo height={40}/>
+              <Logo height={54}/>
             </div>
             <div style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, padding:"28px 24px" }}>
               <span style={S.eyebrow}>A quick word first</span>
@@ -6893,7 +6893,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
     return (
       <div style={{ background:C.bg, color:C.white, fontFamily:"system-ui,sans-serif", fontSize:14, minHeight:"100vh" }}>
         <nav style={{ position:"sticky", top:0, zIndex:100, background:"rgba(10,10,10,0.97)", borderBottom:"1px solid "+C.border, padding:"12px 20px" }}>
-          <Logo height={36}/>
+          <Logo height={50}/>
         </nav>
         <div style={{ padding:"32px 20px 60px", maxWidth:560, margin:"0 auto" }}>
           <span style={S.eyebrow}>Complete Your Profile</span>
@@ -6919,7 +6919,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
     return (
       <div style={{ background:C.bg, minHeight:"100vh", fontFamily:"system-ui,sans-serif", color:C.white }}>
         <nav style={{ background:C.panel, borderBottom:"1px solid "+C.border, padding:"12px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <Logo height={30}/>
+          <Logo height={44}/>
           <button onClick={onLogout} style={{ background:"none", border:"none", color:C.grey, fontSize:12, cursor:"pointer", letterSpacing:"0.08em", textTransform:"uppercase" }}>Sign Out</button>
         </nav>
         <div style={{ padding:"32px 20px 60px", maxWidth:520, margin:"0 auto" }}>
@@ -6967,7 +6967,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
     <div style={{ background:C.bg, minHeight:"100vh", fontFamily:"system-ui,sans-serif", color:C.white }}>
       <nav style={{ background:C.panel, borderBottom:"1px solid "+C.border, padding:"0 20px" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingTop:12 }}>
-          <Logo height={30}/>
+          <Logo height={44}/>
           <button onClick={onLogout} style={{ background:"none", border:"none", color:C.grey, fontSize:12, cursor:"pointer", letterSpacing:"0.08em", textTransform:"uppercase" }}>Sign Out</button>
         </div>
         <div style={{ position:"relative" }}>
@@ -8518,7 +8518,7 @@ function PizzaNightPage({ orders, deadline, deliveryFee, onSubmitOrder, onMarkPa
   return (
     <div style={{ background:C.bg, color:C.white, fontFamily:"system-ui,sans-serif", minHeight:"100vh", fontSize:14 }}>
       <nav style={{ position:"sticky", top:0, zIndex:100, background:"rgba(10,10,10,0.97)", borderBottom:"1px solid "+C.border, padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <Logo height={36}/>
+        <Logo height={50}/>
         <button onClick={onBack} style={{ background:"transparent", border:"1px solid #333", color:"#bbb", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:2, padding:"8px 14px", fontSize:11 }}>Back to site</button>
       </nav>
       {content}
@@ -8649,7 +8649,7 @@ function ShopPage({ items, onReserve, onBack, embedded, defaultName, defaultCont
   return (
     <div style={{ background:C.bg, color:C.white, fontFamily:"system-ui,sans-serif", fontSize:14, minHeight:"100vh" }}>
       <nav style={{ position:"sticky", top:0, zIndex:100, background:"rgba(10,10,10,0.97)", borderBottom:"1px solid "+C.border, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 20px" }}>
-        <Logo height={36}/>
+        <Logo height={50}/>
         <button onClick={onBack} style={{ background:"transparent", border:"1px solid #333", color:"#bbb", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:2, padding:"8px 14px", fontSize:11 }}>Back to site</button>
       </nav>
       {content}
@@ -8703,7 +8703,7 @@ function PublicSite({ onLogin, onApply, blocks, sessions, discountCodes, shopIte
     return (
       <div style={{ background:C.bg, color:C.white, fontFamily:"system-ui,sans-serif", fontSize:14, minHeight:"100vh" }}>
         <nav style={{ position:"sticky", top:0, zIndex:100, background:"rgba(10,10,10,0.97)", borderBottom:"1px solid "+C.border, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 20px" }}>
-          <Logo height={36}/>
+          <Logo height={50}/>
           <button onClick={closeApply} style={{ background:"transparent", border:"1px solid #333", color:"#bbb", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:2, padding:"8px 14px", fontSize:11 }}>Close</button>
         </nav>
         <div style={{ padding:"32px 20px 60px", maxWidth:560, margin:"0 auto" }}>
@@ -8738,7 +8738,7 @@ function PublicSite({ onLogin, onApply, blocks, sessions, discountCodes, shopIte
       <div style={{ background:C.bg, color:C.white, fontFamily:"system-ui,sans-serif", fontSize:14, minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", padding:"32px 20px" }}>
         <div style={{ maxWidth:340, width:"100%" }}>
           <div style={{ display:"flex", justifyContent:"center", marginBottom:24 }}>
-            <Logo height={40}/>
+            <Logo height={54}/>
           </div>
           <div style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, padding:"24px 20px" }}>
             <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:C.grey, marginBottom:14, textAlign:"center" }}>Enter access code</div>
@@ -8765,7 +8765,7 @@ function PublicSite({ onLogin, onApply, blocks, sessions, discountCodes, shopIte
   return (
     <div style={{ background:C.bg, color:C.white, fontFamily:"system-ui,sans-serif", fontSize:14 }}>
       <nav style={{ position:"sticky", top:0, zIndex:100, background:"rgba(10,10,10,0.97)", borderBottom:"1px solid "+C.border, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 20px" }}>
-        <Logo height={36}/>
+        <Logo height={50}/>
         <div style={{ display:"flex", alignItems:"center", gap:20 }}>
           <button onClick={function(){ setShowShop(true); }} style={{ background:"none", border:"none", color:"#999", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", cursor:"pointer", fontSize:12, padding:0 }}>Shop</button>
           <button onClick={onLogin} style={{ background:"transparent", border:"1px solid #333", color:"#bbb", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:2, padding:"8px 22px", fontSize:11, lineHeight:1.5, textAlign:"center" }}>Member<br/>Login</button>
@@ -8854,7 +8854,7 @@ function PublicSite({ onLogin, onApply, blocks, sessions, discountCodes, shopIte
       </section>
 
       <footer style={{ padding:"28px 20px", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12 }}>
-        <Logo height={32}/>
+        <Logo height={45}/>
         <div style={{ display:"flex", alignItems:"center", gap:14 }}>
           <span style={{ color:C.greyDark, fontSize:12 }}>&copy; 2026 Swim Faster London</span>
           <button onClick={function(){ setShowPizzaCodeEntry(true); }} style={{ background:"none", border:"none", color:C.greyDark, fontSize:11, cursor:"pointer", padding:0, opacity:0.6 }}>{"\uD83C\uDF55"}</button>
