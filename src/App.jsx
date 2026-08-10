@@ -6616,6 +6616,14 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
   }
 
   function completeApplication(formData) {
+    // The disabled fieldset stops re-clicks visually, but state updates don't
+    // apply until the next render - two clicks fired in the same tick (a fast
+    // double-click on a slow connection, with nothing else to signal the first
+    // one registered) both read the same stale completeAppSubmitting value and
+    // both got through, creating duplicate session packs/enrolments. A ref
+    // mutates immediately, so it actually blocks the second call.
+    if (completeAppSubmittingRef.current) return;
+    completeAppSubmittingRef.current = true;
     const enrolment = formData.blockEnrolment;
     setCompleteAppSubmitting(true);
     setCompleteAppError("");
@@ -6644,8 +6652,10 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
       }
       return api.createBlockEnrolment(memberId, enrolment);
     }).then(refreshData).then(function() {
+      completeAppSubmittingRef.current = false;
       setCompleteAppSubmitting(false);
     }).catch(function(err) {
+      completeAppSubmittingRef.current = false;
       setCompleteAppSubmitting(false);
       setCompleteAppError(err.message || "Couldn't complete application. Please try again.");
     });
@@ -6793,6 +6803,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
   const [testerStep, setTesterStep] = useState("welcome");
   const [completeAppSubmitting, setCompleteAppSubmitting] = useState(false);
   const [completeAppError, setCompleteAppError] = useState("");
+  const completeAppSubmittingRef = useRef(false);
 
   if (isPending) {
     return (
