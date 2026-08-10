@@ -96,7 +96,7 @@ function mapBlockEnrolment(e) {
     type: e.type,
     blockId: e.block_id,
     blockLabel: e.block_label,
-    pricePaid: e.price_paid,
+    pricePaid: e.price_paid == null ? null : Number(e.price_paid),
     discountCode: e.discount_code,
     joinedMidway: !!e.joined_midway,
     paymentStatus: e.payment_status,
