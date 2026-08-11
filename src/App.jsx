@@ -4783,6 +4783,32 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
     api.confirmEnrolmentPayment(enrolment.id).then(refreshData).catch(function(err) { window.alert("Couldn't confirm payment: " + err.message); });
   }
 
+  // The "Payments Awaiting Confirmation" panel's Received button used to be
+  // the exact same outlined-green-with-a-tick styling used elsewhere in the
+  // app for a read-only "already confirmed" status chip, so it read as a
+  // state rather than something to press. paymentActionFlash gives all three
+  // actions there (Received/Remind/Delete) a clear "this went through"
+  // moment before the row updates/disappears.
+  const [paymentActionFlash, setPaymentActionFlash] = useState(null);
+  const [confirmDeletePendingKey, setConfirmDeletePendingKey] = useState(null);
+  function flashPaymentAction(key, action) {
+    setPaymentActionFlash({ key: key, action: action });
+    setTimeout(function() {
+      setPaymentActionFlash(function(cur) { return (cur && cur.key === key) ? null : cur; });
+    }, 3000);
+  }
+  function remindPendingPayment(memberId, memberName, label, price) {
+    const channel = "dm:" + [String(coachId), String(memberId)].sort().join(":");
+    const text = "Hi "+firstNameOf(memberName)+" - just a reminder that your payment for "+label+" (£"+price.toFixed(2)+") is still awaiting confirmation. Bank details are on your Blocks page whenever you're ready to pay. Thanks!";
+    api.sendMessage(channel, String(coachId), currentCoach.name, true, text).catch(function(err) { window.alert("Couldn't send reminder: " + err.message); });
+  }
+  function deletePendingPack(packId) {
+    api.deleteSessionPack(packId).then(refreshData).catch(function(err) { window.alert("Couldn't delete: " + err.message); });
+  }
+  function deletePendingEnrolment(enrolmentId) {
+    api.deleteBlockEnrolment(enrolmentId).then(refreshData).catch(function(err) { window.alert("Couldn't delete: " + err.message); });
+  }
+
   function deleteSession(sid) {
     api.deleteSession(sid).then(refreshData).catch(function(err) { window.alert("Couldn't delete session: " + err.message); });
     setConfirmDeleteId(null);
@@ -5638,27 +5664,65 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                   <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
                     {pendingPacks.map(function(p) {
                       const m = data.members.find(function(x){ return x.id === p.memberId; });
+                      const label = p.allowedSessionIds ? p.sessionsTotal+" selected Fridays" : p.sessionsTotal+" session pack";
+                      const price = p.pricePaid!=null ? p.pricePaid : p.pricePerSession*p.sessionsTotal;
+                      const flashKey = "pack-"+p.id;
+                      const flash = paymentActionFlash && paymentActionFlash.key===flashKey ? paymentActionFlash.action : null;
+                      const confirmingDelete = confirmDeletePendingKey === flashKey;
                       return (
                         <div key={p.id} style={{ background:C.bg, border:"1px solid "+C.border, borderRadius:2, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap" }}>
                           <div>
                             <span style={{ fontSize:13, color:C.white, fontWeight:700 }}>{m ? (m.nickname||m.name) : "Unknown"}</span>
-                            <span style={{ fontSize:12, color:C.grey, marginLeft:8 }}>{p.allowedSessionIds ? p.sessionsTotal+" selected Fridays" : p.sessionsTotal+" session pack"} - {"\u00A3"}{(p.pricePaid!=null ? p.pricePaid : p.pricePerSession*p.sessionsTotal).toFixed(2)}</span>
+                            <span style={{ fontSize:12, color:C.grey, marginLeft:8 }}>{label} - {"\u00A3"}{price.toFixed(2)}</span>
                           </div>
                           {isHeadCoach && (
-                            <button onClick={function(){ confirmPackPayment(p.id); }} style={{ background:"transparent", border:"1px solid #166534", color:C.green, fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer", flexShrink:0 }}>{"\u2713"} Confirm received</button>
+                            confirmingDelete ? (
+                              <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+                                <span style={{ fontSize:11, color:"#ff6b6b" }}>Delete this?</span>
+                                <button onClick={function(){ deletePendingPack(p.id); setConfirmDeletePendingKey(null); }} style={{ background:"#7f1d1d", border:"none", color:"#fff", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>Yes</button>
+                                <button onClick={function(){ setConfirmDeletePendingKey(null); }} style={{ background:"transparent", border:"1px solid #333", color:"#bbb", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>No</button>
+                              </div>
+                            ) : flash ? (
+                              <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:C.green, flexShrink:0 }}>{"\u2713"} {flash==="received" ? "Marked received" : "Reminder sent"}</span>
+                            ) : (
+                              <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                                <button onClick={function(){ confirmPackPayment(p.id); flashPaymentAction(flashKey, "received"); }} style={{ background:C.green, border:"none", color:"#04150a", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>Received</button>
+                                <button onClick={function(){ remindPendingPayment(p.memberId, m ? (m.nickname||m.name) : "there", label, price); flashPaymentAction(flashKey, "reminded"); }} style={{ background:"transparent", border:"1px solid #3b82f6", color:"#3b82f6", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>Remind</button>
+                                <button onClick={function(){ setConfirmDeletePendingKey(flashKey); }} style={{ background:"transparent", border:"1px solid #7f1d1d", color:"#ff6b6b", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>Delete</button>
+                              </div>
+                            )
                           )}
                         </div>
                       );
                     })}
                     {pendingEnrolments.map(function(pe, i) {
+                      const label = pe.enrolment.blockLabel;
+                      const price = pe.enrolment.pricePaid||0;
+                      const flashKey = "enr-"+pe.enrolment.id;
+                      const flash = paymentActionFlash && paymentActionFlash.key===flashKey ? paymentActionFlash.action : null;
+                      const confirmingDelete = confirmDeletePendingKey === flashKey;
                       return (
                         <div key={"enr"+i} style={{ background:C.bg, border:"1px solid "+C.border, borderRadius:2, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap" }}>
                           <div>
                             <span style={{ fontSize:13, color:C.white, fontWeight:700 }}>{pe.member.nickname||pe.member.name}</span>
-                            <span style={{ fontSize:12, color:C.grey, marginLeft:8 }}>{pe.enrolment.blockLabel} - {"\u00A3"}{(pe.enrolment.pricePaid||0).toFixed(2)}</span>
+                            <span style={{ fontSize:12, color:C.grey, marginLeft:8 }}>{label} - {"\u00A3"}{price.toFixed(2)}</span>
                           </div>
                           {isHeadCoach && (
-                            <button onClick={function(){ confirmEnrolmentPayment(pe.member.id, pe.enrolment.signedUpDate, pe.enrolment.blockId); }} style={{ background:"transparent", border:"1px solid #166534", color:C.green, fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer", flexShrink:0 }}>{"\u2713"} Confirm received</button>
+                            confirmingDelete ? (
+                              <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+                                <span style={{ fontSize:11, color:"#ff6b6b" }}>Delete this?</span>
+                                <button onClick={function(){ deletePendingEnrolment(pe.enrolment.id); setConfirmDeletePendingKey(null); }} style={{ background:"#7f1d1d", border:"none", color:"#fff", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>Yes</button>
+                                <button onClick={function(){ setConfirmDeletePendingKey(null); }} style={{ background:"transparent", border:"1px solid #333", color:"#bbb", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>No</button>
+                              </div>
+                            ) : flash ? (
+                              <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:C.green, flexShrink:0 }}>{"\u2713"} {flash==="received" ? "Marked received" : "Reminder sent"}</span>
+                            ) : (
+                              <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                                <button onClick={function(){ confirmEnrolmentPayment(pe.member.id, pe.enrolment.signedUpDate, pe.enrolment.blockId); flashPaymentAction(flashKey, "received"); }} style={{ background:C.green, border:"none", color:"#04150a", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>Received</button>
+                                <button onClick={function(){ remindPendingPayment(pe.member.id, pe.member.nickname||pe.member.name, label, price); flashPaymentAction(flashKey, "reminded"); }} style={{ background:"transparent", border:"1px solid #3b82f6", color:"#3b82f6", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>Remind</button>
+                                <button onClick={function(){ setConfirmDeletePendingKey(flashKey); }} style={{ background:"transparent", border:"1px solid #7f1d1d", color:"#ff6b6b", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>Delete</button>
+                              </div>
+                            )
                           )}
                         </div>
                       );

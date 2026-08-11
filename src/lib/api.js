@@ -564,6 +564,11 @@ export async function createBlockEnrolment(memberId, enrolment) {
   return mapBlockEnrolment(newRow);
 }
 
+export async function deleteBlockEnrolment(enrolmentId) {
+  const { error } = await supabase.from("block_enrolments").delete().eq("id", enrolmentId);
+  if (error) throw error;
+}
+
 // ---------------------------------------------------------------------------
 // Block reports / session feedback / general comments (coach -> roster)
 // ---------------------------------------------------------------------------
