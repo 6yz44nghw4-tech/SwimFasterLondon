@@ -4396,7 +4396,23 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   const setData = setSharedData || setLocalData;
   const currentCoach = (data.coaches||COACHES_DATA).find(function(c){ return c.id === coachId; }) || (data.coaches||COACHES_DATA)[0];
   const isHeadCoach = currentCoach.role === "head";
-  const [readNotifIds, setReadNotifIds] = useState({});
+  // Was plain in-memory state, so "Mark all read" only ever lasted until the
+  // next reload - every notification came back as unread on refresh. Mirrors
+  // it into localStorage (per coach) so read state actually sticks; a full
+  // server-persisted version (like messagesSeenAt below) can follow later if
+  // this needs to sync across devices, but this alone fixes what was reported.
+  const notifReadStorageKey = "sfl_coach_notifs_read_" + coachId;
+  const [readNotifIds, setReadNotifIds] = useState(function() {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = window.localStorage.getItem(notifReadStorageKey);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+  });
+  useEffect(function() {
+    if (typeof window === "undefined") return;
+    try { window.localStorage.setItem(notifReadStorageKey, JSON.stringify(readNotifIds)); } catch (e) {}
+  }, [readNotifIds, notifReadStorageKey]);
 
   function sendCoachMessage(next) {
     const msg = next[next.length - 1];
@@ -6821,7 +6837,22 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
     api.markMemberMessagesSeen(memberId).catch(function(err) { console.error("Couldn't mark messages seen", err); });
   }
 
-  const [lastSeenNotifCount, setLastSeenNotifCount] = useState(0);
+  // Same fix as the coach dashboard's readNotifIds: plain local state meant
+  // opening the Notifications tab and then reloading the page brought every
+  // notification back as "new". Persist the count to localStorage instead.
+  const notifSeenStorageKey = "sfl_member_notifs_seen_" + memberId;
+  const [lastSeenNotifCount, setLastSeenNotifCountState] = useState(function() {
+    if (typeof window === "undefined") return 0;
+    try {
+      const raw = window.localStorage.getItem(notifSeenStorageKey);
+      return raw ? parseInt(raw, 10) || 0 : 0;
+    } catch (e) { return 0; }
+  });
+  function setLastSeenNotifCount(n) {
+    setLastSeenNotifCountState(n);
+    if (typeof window === "undefined") return;
+    try { window.localStorage.setItem(notifSeenStorageKey, String(n)); } catch (e) {}
+  }
   function buildMyNotifications() {
     const items = [];
     const prefs = member.notifPrefs || { feedback:true, comments:true, blockReports:true, cancellations:true };
@@ -9091,6 +9122,16 @@ export default function App() {
   async function addApplication(appData) {
     const signUpResult = await api.signUp(appData.email, appData.password);
     const authUser = signUpResult.user;
+    // Supabase deliberately doesn't error here when the email is already
+    // registered (so a stranger can't probe which emails have accounts) -
+    // it returns a "user" object anyway, just with an empty identities list.
+    // Without this check that fake user's id got used to write an orphaned
+    // application/member row with no real account behind it, since the
+    // matching signup silently never happened (this is what happened to
+    // Sofia applying a second time instead of using her existing login).
+    if (authUser && authUser.identities && authUser.identities.length === 0) {
+      throw new Error("An account already exists for this email. Please use Member Login instead of applying again - if you don't remember your password, ask your coach to reset it.");
+    }
     if (!authUser) {
       throw new Error("Check your inbox to confirm your email, then log in to finish your application.");
     }
