@@ -5642,7 +5642,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                         <div key={p.id} style={{ background:C.bg, border:"1px solid "+C.border, borderRadius:2, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap" }}>
                           <div>
                             <span style={{ fontSize:13, color:C.white, fontWeight:700 }}>{m ? (m.nickname||m.name) : "Unknown"}</span>
-                            <span style={{ fontSize:12, color:C.grey, marginLeft:8 }}>{p.allowedSessionIds ? p.sessionsTotal+" selected Fridays" : p.sessionsTotal+" session pack"} - {"\u00A3"}{(p.pricePaid!==undefined ? p.pricePaid : p.pricePerSession*p.sessionsTotal).toFixed(2)}</span>
+                            <span style={{ fontSize:12, color:C.grey, marginLeft:8 }}>{p.allowedSessionIds ? p.sessionsTotal+" selected Fridays" : p.sessionsTotal+" session pack"} - {"\u00A3"}{(p.pricePaid!=null ? p.pricePaid : p.pricePerSession*p.sessionsTotal).toFixed(2)}</span>
                           </div>
                           {isHeadCoach && (
                             <button onClick={function(){ confirmPackPayment(p.id); }} style={{ background:"transparent", border:"1px solid #166534", color:C.green, fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer", flexShrink:0 }}>{"\u2713"} Confirm received</button>
@@ -6726,7 +6726,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
         }
         return api.createSessionPackForMember(memberId, {
           sessionsTotal: enrolment.packSessionCount, pricePerSession: enrolment.packPricePerSession || SESSION_PACK_PER_SESSION_PRICE,
-          discountCode: enrolment.discountCode||null, expiryDate: expiryDate.toISOString().slice(0,10),
+          pricePaid: enrolment.pricePaid, discountCode: enrolment.discountCode||null, expiryDate: expiryDate.toISOString().slice(0,10),
           createdBy: "application", allowedSessionIds: isDateTied ? enrolment.packSelectedSessionIds : null, paymentStatus: "pending",
         });
       }
@@ -7021,7 +7021,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
             {paymentLock.unpaidPacks.map(function(p) {
               return (
                 <div key={p.id} style={{ fontSize:13, color:"#ffb4b4", lineHeight:1.6, marginBottom:4 }}>
-                  {"\u2022"} {p.allowedSessionIds ? p.sessionsTotal+" selected Fridays" : p.sessionsTotal+" session pack"} - {"\u00A3"}{(p.pricePaid!==undefined ? p.pricePaid : (p.pricePerSession*p.sessionsTotal)).toFixed(2)}
+                  {"\u2022"} {p.allowedSessionIds ? p.sessionsTotal+" selected Fridays" : p.sessionsTotal+" session pack"} - {"\u00A3"}{(p.pricePaid!=null ? p.pricePaid : (p.pricePerSession*p.sessionsTotal)).toFixed(2)}
                 </div>
               );
             })}
