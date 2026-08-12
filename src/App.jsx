@@ -1878,6 +1878,53 @@ function loyaltyDiscountForCount(consecutiveBlocks) {
   return 0;
 }
 
+// Pro-rata price for joining a single block partway through, shared between
+// the swimmer-facing sign-up flow and the coach's Blocks tab (which needs to
+// show the same "if someone signs up today" figure without duplicating the
+// session-counting logic).
+function blockProRataPrice(block, sessions, fromDateStr) {
+  const inRange = (sessions||[]).filter(function(s) { return s.date >= block.startDate && s.date <= block.endDate && s.status !== "cancelled"; });
+  const total = inRange.length || 1;
+  const remaining = inRange.filter(function(s) { return s.date >= fromDateStr; }).length;
+  const isMidway = remaining < total && remaining > 0;
+  const price = isMidway ? (block.priceFull / total) * remaining : block.priceFull;
+  return { price: Math.round(price * 100) / 100, isMidway: isMidway, remaining: remaining, total: total };
+}
+
+// A "Full Year" plan runs exactly one year from signup, which routinely lands
+// mid-block rather than lining up with a block boundary - that's expected.
+// This works out the resulting end date, and - if that end date falls before
+// the end of whichever block it lands in - the optional extra a swimmer can
+// pay (at the same yearly discount) to round their year out to the end of
+// that block instead of stopping mid-block.
+function computeYearPlanDates(startDateStr, blocks, sessions) {
+  const start = new Date(startDateStr);
+  const defaultEnd = new Date(start);
+  defaultEnd.setFullYear(defaultEnd.getFullYear() + 1);
+  const defaultEndDate = defaultEnd.toISOString().slice(0, 10);
+
+  const finalBlock = (blocks||[]).find(function(b) { return defaultEndDate >= b.startDate && defaultEndDate <= b.endDate; });
+  if (!finalBlock || defaultEndDate >= finalBlock.endDate) {
+    return { startDate: startDateStr, defaultEndDate: defaultEndDate, finalBlock: finalBlock||null, extendedEndDate: null, extendPrice: 0 };
+  }
+
+  const inRange = (sessions||[]).filter(function(s) { return s.date >= finalBlock.startDate && s.date <= finalBlock.endDate && s.status !== "cancelled"; });
+  const total = inRange.length || 1;
+  const remaining = inRange.filter(function(s) { return s.date > defaultEndDate; }).length;
+  let extendPrice = 0;
+  if (remaining > 0) {
+    const rawExtend = (finalBlock.priceFull / total) * remaining;
+    extendPrice = Math.round(rawExtend * (1 - YEAR_PLAN.discountPercent/100) * 100) / 100;
+  }
+  return {
+    startDate: startDateStr,
+    defaultEndDate: defaultEndDate,
+    finalBlock: finalBlock,
+    extendedEndDate: remaining > 0 ? finalBlock.endDate : null,
+    extendPrice: extendPrice,
+  };
+}
+
 // A member's account locks if they've been marked as attended (present in the coach's
 // register) for a session that's only covered by a pack or block enrolment still
 // awaiting payment confirmation from the head coach. This deliberately does NOT lock
@@ -4775,12 +4822,12 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
     api.confirmPackPayment(packId).then(refreshData).catch(function(err) { window.alert("Couldn't confirm payment: " + err.message); });
   }
 
-  function confirmEnrolmentPayment(memberId, enrolmentSignedUpDate, enrolmentBlockId) {
+  function confirmEnrolmentPayment(memberId, enrolmentSignedUpDate, enrolmentBlockId, endDate) {
     if (!isHeadCoach) return;
     const member = data.members.find(function(m) { return m.id === memberId; });
     const enrolment = member && (member.blockEnrolments||[]).find(function(e) { return e.signedUpDate === enrolmentSignedUpDate && e.blockId === enrolmentBlockId; });
     if (!enrolment) return;
-    api.confirmEnrolmentPayment(enrolment.id).then(refreshData).catch(function(err) { window.alert("Couldn't confirm payment: " + err.message); });
+    api.confirmEnrolmentPayment(enrolment.id, endDate).then(refreshData).catch(function(err) { window.alert("Couldn't confirm payment: " + err.message); });
   }
 
   // The "Payments Awaiting Confirmation" panel's Received button used to be
@@ -4791,6 +4838,17 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   // moment before the row updates/disappears.
   const [paymentActionFlash, setPaymentActionFlash] = useState(null);
   const [confirmDeletePendingKey, setConfirmDeletePendingKey] = useState(null);
+  // Confirming a "year" enrolment's payment is the one place the coach can
+  // set/adjust its coverage end date - a year runs exactly 365 days from
+  // signup by default, which routinely lands mid-block, so this is the
+  // checkpoint to correct it (e.g. if the swimmer paid for the block-end
+  // extension by bank transfer separately, outside the sign-up flow).
+  const [confirmingYearEndKey, setConfirmingYearEndKey] = useState(null);
+  const [yearEndDateDraft, setYearEndDateDraft] = useState("");
+  function startConfirmYearEnrolment(key, currentEndDate) {
+    setConfirmingYearEndKey(key);
+    setYearEndDateDraft(currentEndDate || "");
+  }
   function flashPaymentAction(key, action) {
     setPaymentActionFlash({ key: key, action: action });
     setTimeout(function() {
@@ -5106,21 +5164,36 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                       const b = (data.blocks||BLOCKS).find(function(x) { return x.id===e.blockId; });
                       const isPast = b && new Date(b.endDate) < new Date();
                       const pending = e.paymentStatus === "pending";
+                      const isYear = e.type === "year";
+                      const flashKey = "enr-"+e.id;
+                      const confirmingYearEnd = confirmingYearEndKey === flashKey;
                       return (
                         <div key={i} style={{ background:C.bg, borderRadius:2, padding:"8px 12px", opacity:isPast?0.7:1 }}>
                           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
                             <div>
                               <span style={{ fontSize:12, color:C.white, fontWeight:700 }}>{e.blockLabel}</span>
-                              {e.type==="year" && <span style={{ fontSize:9, color:C.amber, marginLeft:6, textTransform:"uppercase", letterSpacing:"0.06em" }}>Year plan</span>}
+                              {isYear && <span style={{ fontSize:9, color:C.amber, marginLeft:6, textTransform:"uppercase", letterSpacing:"0.06em" }}>Year plan</span>}
                               {isPast && <span style={{ fontSize:9, color:C.greyDark, marginLeft:6, textTransform:"uppercase", letterSpacing:"0.06em" }}>Past</span>}
                               {pending && <span style={{ fontSize:9, color:"#ff6b6b", marginLeft:6, textTransform:"uppercase", letterSpacing:"0.06em" }}>Awaiting payment</span>}
+                              {isYear && (e.signedUpDate || e.endDate) && (
+                                <div style={{ fontSize:10, color:C.greyDark, marginTop:2 }}>{e.signedUpDate||"?"} to {e.endDate||"(end date not yet set)"}</div>
+                              )}
                             </div>
                             <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
                               <span style={{ fontSize:12, color:C.greyLight, fontFamily:"monospace" }}>{"\u00A3"}{(e.pricePaid||0).toFixed(2)}</span>
                             </div>
                           </div>
                           {pending && isHeadCoach && (
-                            <button onClick={function(){ confirmEnrolmentPayment(profileMember.id, e.signedUpDate, e.blockId); }} style={{ display:"block", width:"100%", background:"transparent", border:"1px solid #166534", color:C.green, fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer", marginTop:8 }}>{"\u2713"} Confirm payment received</button>
+                            confirmingYearEnd ? (
+                              <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap", marginTop:8 }}>
+                                <span style={{ fontSize:11, color:C.grey }}>Ends:</span>
+                                <input type="date" value={yearEndDateDraft} onChange={function(e2){ setYearEndDateDraft(e2.target.value); }} style={{ background:"#161616", border:"1px solid #333", color:"#fff", padding:"5px 8px", fontSize:12, borderRadius:2, outline:"none" }}/>
+                                <button onClick={function(){ confirmEnrolmentPayment(profileMember.id, e.signedUpDate, e.blockId, yearEndDateDraft); setConfirmingYearEndKey(null); }} style={{ background:C.green, border:"none", color:"#04150a", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>Confirm</button>
+                                <button onClick={function(){ setConfirmingYearEndKey(null); }} style={{ background:"transparent", border:"1px solid #333", color:"#bbb", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>Cancel</button>
+                              </div>
+                            ) : (
+                              <button onClick={function(){ if (isYear) { startConfirmYearEnrolment(flashKey, e.endDate); } else { confirmEnrolmentPayment(profileMember.id, e.signedUpDate, e.blockId); } }} style={{ display:"block", width:"100%", background:"transparent", border:"1px solid #166534", color:C.green, fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer", marginTop:8 }}>{"\u2713"} Confirm payment received</button>
+                            )
                           )}
                         </div>
                       );
@@ -5698,17 +5771,27 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                     {pendingEnrolments.map(function(pe, i) {
                       const label = pe.enrolment.blockLabel;
                       const price = pe.enrolment.pricePaid||0;
+                      const isYear = pe.enrolment.type === "year";
                       const flashKey = "enr-"+pe.enrolment.id;
                       const flash = paymentActionFlash && paymentActionFlash.key===flashKey ? paymentActionFlash.action : null;
                       const confirmingDelete = confirmDeletePendingKey === flashKey;
+                      const confirmingYearEnd = confirmingYearEndKey === flashKey;
                       return (
                         <div key={"enr"+i} style={{ background:C.bg, border:"1px solid "+C.border, borderRadius:2, padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap" }}>
                           <div>
                             <span style={{ fontSize:13, color:C.white, fontWeight:700 }}>{pe.member.nickname||pe.member.name}</span>
                             <span style={{ fontSize:12, color:C.grey, marginLeft:8 }}>{label} - {"\u00A3"}{price.toFixed(2)}</span>
+                            {isYear && pe.enrolment.endDate && <span style={{ fontSize:11, color:C.greyDark, marginLeft:8 }}>ends {pe.enrolment.endDate}</span>}
                           </div>
                           {isHeadCoach && (
-                            confirmingDelete ? (
+                            confirmingYearEnd ? (
+                              <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0, flexWrap:"wrap" }}>
+                                <span style={{ fontSize:11, color:C.grey }}>Ends:</span>
+                                <input type="date" value={yearEndDateDraft} onChange={function(e){ setYearEndDateDraft(e.target.value); }} style={{ background:"#161616", border:"1px solid #333", color:"#fff", padding:"5px 8px", fontSize:12, borderRadius:2, outline:"none" }}/>
+                                <button onClick={function(){ confirmEnrolmentPayment(pe.member.id, pe.enrolment.signedUpDate, pe.enrolment.blockId, yearEndDateDraft); flashPaymentAction(flashKey, "received"); setConfirmingYearEndKey(null); }} style={{ background:C.green, border:"none", color:"#04150a", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>Confirm</button>
+                                <button onClick={function(){ setConfirmingYearEndKey(null); }} style={{ background:"transparent", border:"1px solid #333", color:"#bbb", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>Cancel</button>
+                              </div>
+                            ) : confirmingDelete ? (
                               <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
                                 <span style={{ fontSize:11, color:"#ff6b6b" }}>Delete this?</span>
                                 <button onClick={function(){ deletePendingEnrolment(pe.enrolment.id); setConfirmDeletePendingKey(null); }} style={{ background:"#7f1d1d", border:"none", color:"#fff", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>Yes</button>
@@ -5718,7 +5801,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                               <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:C.green, flexShrink:0 }}>{"\u2713"} {flash==="received" ? "Marked received" : "Reminder sent"}</span>
                             ) : (
                               <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-                                <button onClick={function(){ confirmEnrolmentPayment(pe.member.id, pe.enrolment.signedUpDate, pe.enrolment.blockId); flashPaymentAction(flashKey, "received"); }} style={{ background:C.green, border:"none", color:"#04150a", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>Received</button>
+                                <button onClick={function(){ if (isYear) { startConfirmYearEnrolment(flashKey, pe.enrolment.endDate); } else { confirmEnrolmentPayment(pe.member.id, pe.enrolment.signedUpDate, pe.enrolment.blockId); flashPaymentAction(flashKey, "received"); } }} style={{ background:C.green, border:"none", color:"#04150a", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>Received</button>
                                 <button onClick={function(){ remindPendingPayment(pe.member.id, pe.member.nickname||pe.member.name, label, price); flashPaymentAction(flashKey, "reminded"); }} style={{ background:"transparent", border:"1px solid #3b82f6", color:"#3b82f6", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>Remind</button>
                                 <button onClick={function(){ setConfirmDeletePendingKey(flashKey); }} style={{ background:"transparent", border:"1px solid #7f1d1d", color:"#ff6b6b", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", padding:"6px 10px", borderRadius:2, cursor:"pointer" }}>Delete</button>
                               </div>
@@ -5736,8 +5819,10 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
             <div style={{ display:"flex", flexDirection:"column", gap:2, marginBottom:24 }}>
               {(data.blocks||BLOCKS).map(function(b) {
                 const today = new Date();
+                const todayStr = today.toISOString().slice(0,10);
                 const isPast = new Date(b.endDate) < today;
                 const isCurrent = new Date(b.startDate) <= today && today <= new Date(b.endDate);
+                const proRata = !isPast ? blockProRataPrice(b, data.sessions||[], todayStr) : null;
                 return (
                   <div key={b.id} style={{ background:C.panel, border:"1px solid "+(isCurrent?C.red:C.border), borderRadius:2, padding:"14px 16px" }}>
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, marginBottom:10 }}>
@@ -5767,6 +5852,9 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                       )}
                       <span style={{ fontSize:11, color:C.greyDark }}>per swimmer, full block</span>
                     </div>
+                    {proRata && proRata.isMidway && (
+                      <div style={{ fontSize:11, color:"#3b82f6", marginBottom:12, marginTop:-6 }}>Pro-rata if signed up today: {"£"}{proRata.price.toFixed(2)} ({proRata.remaining}/{proRata.total} sessions left)</div>
+                    )}
                     {(function() {
                       const signedUp = data.members.filter(function(m) {
                         return (m.blockEnrolments||[]).some(function(e) { return e.blockId===b.id || e.type==="year"; }) && m.memberStatus !== "pending" && m.memberStatus !== "rejected";
@@ -5792,10 +5880,12 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                                   <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:C.green, marginBottom:6 }}>Signed up</div>
                                   <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
                                     {signedUp.map(function(m) {
+                                      const e = (m.blockEnrolments||[]).find(function(e) { return e.blockId===b.id || e.type==="year"; });
                                       return (
                                         <div key={m.id} onClick={function(){ setSelectedProfile(m.id); }} style={{ display:"flex", alignItems:"center", gap:10, background:C.bg, padding:"10px 12px", borderRadius:2, cursor:"pointer", border:"1px solid "+C.border }}>
                                           <Avatar name={m.name} size={28} photo={m.photo}/>
                                           <span style={{ fontSize:14, color:C.white, fontWeight:700, flex:1 }}>{displayName(m)}</span>
+                                          {e && e.type==="year" && <span style={{ fontSize:9, color:C.amber, textTransform:"uppercase", letterSpacing:"0.06em" }}>Year plan</span>}
                                         </div>
                                       );
                                     })}
@@ -7562,7 +7652,7 @@ function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialVal
     goals:"", targetEvent:"",
     medical:"", extra:"",
     membershipType:"block", selectedBlockId:"", discountCodeInput:"", privacyConsent:false,
-    packType:"persession", selectedSessionDates:[],
+    packType:"persession", selectedSessionDates:[], yearExtend:false,
   };
   // A refresh or an accidental browser-back used to wipe the whole form back
   // to step 1 with nothing saved - this mirrors step/answers into
@@ -7663,6 +7753,7 @@ function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialVal
   function handleExtra(e) { setF("extra", e.target.value); }
   function handleMembershipType(t) { setF("membershipType", t); }
   function handlePackType(t) { setF("packType", t); }
+  function toggleYearExtend() { setF("yearExtend", !form.yearExtend); }
   function toggleSessionDate(sessionId) {
     setF("selectedSessionDates", form.selectedSessionDates.indexOf(sessionId) !== -1
       ? form.selectedSessionDates.filter(function(id){ return id !== sessionId; })
@@ -7697,10 +7788,16 @@ function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialVal
     return { price: Math.round(price * 100) / 100, isMidway: isMidway, remaining: remaining, total: total };
   }
 
+  function yearPlanDates() {
+    const today = new Date().toISOString().slice(0,10);
+    return computeYearPlanDates(today, blocks||[], sessions||[]);
+  }
+
   function calcYearPrice() {
     const fullYearTotal = (blocks||[]).reduce(function(sum, b) { return sum + b.priceFull; }, 0);
     const discounted = fullYearTotal * (1 - YEAR_PLAN.discountPercent/100);
-    return Math.round(discounted * 100) / 100;
+    const base = Math.round(discounted * 100) / 100;
+    return form.yearExtend ? Math.round((base + yearPlanDates().extendPrice) * 100) / 100 : base;
   }
 
   function perSessionRate() {
@@ -7793,6 +7890,7 @@ function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialVal
       packSessionCount: packSessionCount,
       packPricePerSession: form.membershipType==="pack" ? perSessionRate() : null,
       packSelectedSessionIds: isDateTied ? form.selectedSessionDates : null,
+      endDate: form.membershipType==="year" ? (form.yearExtend ? yearPlanDates().extendedEndDate : yearPlanDates().defaultEndDate) : null,
       paymentStatus: "pending",
       signedUpDate: new Date().toISOString().slice(0,10),
     };
@@ -8099,13 +8197,28 @@ function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialVal
             </div>
           )}
 
-          {form.membershipType==="year" && (
-            <div style={{ background:"#111", border:"1px solid #262626", borderRadius:2, padding:"14px 16px", marginBottom:16 }}>
-              <div style={{ fontWeight:700, fontSize:14, color:"#fff", marginBottom:4 }}>{YEAR_PLAN.label}</div>
-              <div style={{ fontSize:12, color:"#888", marginBottom:10 }}>All four quarterly blocks, {YEAR_PLAN.discountPercent}% off the combined price.</div>
-              <div style={{ fontWeight:900, fontSize:18, color:"#f59e0b" }}>{"\u00A3"}{calcYearPrice().toFixed(2)}</div>
-            </div>
-          )}
+          {form.membershipType==="year" && (function() {
+            const yd = yearPlanDates();
+            return (
+              <div style={{ background:"#111", border:"1px solid #262626", borderRadius:2, padding:"14px 16px", marginBottom:16 }}>
+                <div style={{ fontWeight:700, fontSize:14, color:"#fff", marginBottom:4 }}>{YEAR_PLAN.label}</div>
+                <div style={{ fontSize:12, color:"#888", marginBottom:10 }}>All four quarterly blocks, {YEAR_PLAN.discountPercent}% off the combined price.</div>
+                <div style={{ fontSize:12, color:"#ccc", marginBottom:10 }}>
+                  Runs <strong style={{ color:"#fff" }}>{yd.startDate}</strong> to <strong style={{ color:"#fff" }}>{form.yearExtend && yd.extendedEndDate ? yd.extendedEndDate : yd.defaultEndDate}</strong>
+                  {!(form.yearExtend && yd.extendedEndDate) && yd.finalBlock && yd.extendedEndDate && (
+                    <span> - lands partway through {yd.finalBlock.label}, that's expected.</span>
+                  )}
+                </div>
+                {yd.extendedEndDate && yd.extendPrice > 0 && (
+                  <label style={{ display:"flex", alignItems:"flex-start", gap:8, fontSize:12, color:"#ccc", marginBottom:10, cursor:"pointer" }}>
+                    <input type="checkbox" checked={form.yearExtend} onChange={toggleYearExtend} style={{ marginTop:2 }}/>
+                    <span>Extend to the end of {yd.finalBlock.label} ({yd.extendedEndDate}) for an extra {"\u00A3"}{yd.extendPrice.toFixed(2)}, so membership doesn't stop mid-block.</span>
+                  </label>
+                )}
+                <div style={{ fontWeight:900, fontSize:18, color:"#f59e0b" }}>{"\u00A3"}{calcYearPrice().toFixed(2)}</div>
+              </div>
+            );
+          })()}
 
           <div style={{ marginBottom:16 }}>
             <label style={labelStyle}>Discount code (optional)</label>

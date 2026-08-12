@@ -101,6 +101,7 @@ function mapBlockEnrolment(e) {
     joinedMidway: !!e.joined_midway,
     paymentStatus: e.payment_status,
     signedUpDate: e.signed_up_date,
+    endDate: e.end_date,
   };
 }
 
@@ -430,6 +431,7 @@ export async function createApplicationAndMember(appData, authUserId) {
     pack_session_count: appData.blockEnrolment ? appData.blockEnrolment.packSessionCount : null,
     pack_price_per_session: appData.blockEnrolment ? appData.blockEnrolment.packPricePerSession : null,
     pack_selected_session_ids: appData.blockEnrolment ? appData.blockEnrolment.packSelectedSessionIds : null,
+    end_date: appData.blockEnrolment ? appData.blockEnrolment.endDate || null : null,
     payment_status: "pending",
     status: "pending",
   };
@@ -543,8 +545,10 @@ export async function confirmPackPayment(packId) {
   if (error) throw error;
 }
 
-export async function confirmEnrolmentPayment(enrolmentId) {
-  const { error } = await supabase.from("block_enrolments").update({ payment_status: "confirmed" }).eq("id", enrolmentId);
+export async function confirmEnrolmentPayment(enrolmentId, endDate) {
+  const row = { payment_status: "confirmed" };
+  if (endDate) row.end_date = endDate;
+  const { error } = await supabase.from("block_enrolments").update(row).eq("id", enrolmentId);
   if (error) throw error;
 }
 
@@ -559,6 +563,7 @@ export async function createBlockEnrolment(memberId, enrolment) {
     joined_midway: !!enrolment.joinedMidway,
     payment_status: enrolment.paymentStatus || "pending",
     signed_up_date: enrolment.signedUpDate || new Date().toISOString().slice(0, 10),
+    end_date: enrolment.endDate || null,
   };
   const newRow = unwrap(await supabase.from("block_enrolments").insert(row).select().single());
   return mapBlockEnrolment(newRow);
