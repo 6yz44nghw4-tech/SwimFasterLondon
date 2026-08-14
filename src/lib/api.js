@@ -62,6 +62,7 @@ function mapBenchmark(b) {
     strokeCount2: b.stroke_count_2,
     splits: b.splits,
     strokeCounts: b.stroke_counts,
+    createdDate: b.created_at ? b.created_at.slice(0, 10) : b.date,
   };
 }
 

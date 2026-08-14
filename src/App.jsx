@@ -2095,8 +2095,12 @@ function SettingsModal({ currentEmail, currentPassword, notifPrefs, onSave, onDe
   const [name, setName] = useState(currentName||"");
   const defaultPrefs = isCoachSettings
     ? { applications:true, raceReports:true, eventSignups:true, blockSignups:true }
-    : { feedback:true, comments:true, blockReports:true, cancellations:true };
-  const [prefs, setPrefs] = useState(notifPrefs || defaultPrefs);
+    : { feedback:true, comments:true, blockReports:true, cancellations:true, expiring:true, newTimes:true };
+  // Merge (not replace) so a member's previously-saved prefs, which predate a
+  // newly added toggle, don't render that toggle as off just because the key
+  // is missing - buildMyNotifications already treats a missing key as "on"
+  // via `!== false`, so the toggle needs to agree with that default.
+  const [prefs, setPrefs] = useState(Object.assign({}, defaultPrefs, notifPrefs || {}));
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -2104,7 +2108,7 @@ function SettingsModal({ currentEmail, currentPassword, notifPrefs, onSave, onDe
 
   const notifOptions = isCoachSettings
     ? [["applications","New applications"],["raceReports","Race reports logged"],["eventSignups","Race/event sign-ups"],["blockSignups","Block sign-ups"]]
-    : [["feedback","Session feedback"],["comments","Coach comments"],["blockReports","Block progress reports"],["cancellations","Cancelled sessions"]];
+    : [["feedback","Session feedback"],["comments","Coach comments"],["blockReports","Block progress reports"],["cancellations","Cancelled sessions"],["expiring","Pack/membership expiring soon"],["newTimes","New times logged"]];
 
   function togglePref(key) {
     setPrefs(function(p) { const u = Object.assign({}, p); u[key] = !u[key]; return u; });
@@ -7037,7 +7041,9 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
   }
   function buildMyNotifications() {
     const items = [];
-    const prefs = member.notifPrefs || { feedback:true, comments:true, blockReports:true, cancellations:true };
+    const prefs = member.notifPrefs || { feedback:true, comments:true, blockReports:true, cancellations:true, expiring:true, newTimes:true };
+    const todayStr = new Date().toISOString().slice(0, 10);
+    function daysUntil(dateStr) { return Math.round((new Date(dateStr) - new Date(todayStr)) / 86400000); }
     if (prefs.feedback !== false) {
       (member.sessionFeedback||[]).forEach(function(f) {
         items.push({ id:"fb-"+f.id, icon:"Session feedback", title:"Your coach left feedback on "+f.date, detail:f.text||(f.audio?"Voice note - tap to listen":""), date:f.createdDate, sortKey:f.createdDate, color:"#3b82f6" });
@@ -7061,6 +7067,53 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
         if (s.status === "cancelled") {
           items.push({ id:"cancel-"+s.id, icon:"Session cancelled", title:(s.focus||s.title)+" on "+s.date+" isn't running", detail:"", date:s.date, sortKey:s.date, color:"#ff6b6b" });
         }
+      });
+    }
+    if (prefs.expiring !== false) {
+      const activePack = (allData.sessionPacks||[])
+        .filter(function(p) { return p.memberId === member.id && p.sessionsUsed < p.sessionsTotal; })
+        .sort(function(a,b) { return b.purchaseDate.localeCompare(a.purchaseDate); })[0];
+      if (activePack) {
+        const d = daysUntil(activePack.expiryDate);
+        if (d <= 7 && d >= -7) {
+          const left = activePack.sessionsTotal - activePack.sessionsUsed;
+          items.push({
+            id:"pack-exp-"+activePack.id, icon:"Pack expiring",
+            title: d >= 0 ? "Your session pack expires in "+d+" day"+(d!==1?"s":"") : "Your session pack expired "+(-d)+" day"+(d!==-1?"s":"")+" ago",
+            detail: left+" session"+(left!==1?"s":"")+" left - top up to keep swimming",
+            date:activePack.expiryDate, sortKey:activePack.expiryDate, color:"#f59e0b", tab:"calendar",
+          });
+        }
+      }
+      const activeEnrolment = (member.blockEnrolments||[]).filter(function(e) {
+        if (e.type === "year") return !e.endDate || e.endDate >= todayStr;
+        const b = (allData.blocks||BLOCKS).find(function(x) { return x.id === e.blockId; });
+        return b && b.endDate >= todayStr;
+      })[0];
+      const enrolmentEndDate = activeEnrolment && (activeEnrolment.type === "year"
+        ? activeEnrolment.endDate
+        : (((allData.blocks||BLOCKS).find(function(x) { return x.id === activeEnrolment.blockId; })||{}).endDate));
+      if (enrolmentEndDate) {
+        const d = daysUntil(enrolmentEndDate);
+        if (d <= 7 && d >= -7) {
+          const label = activeEnrolment.blockLabel || "membership";
+          items.push({
+            id:"enr-exp-"+activeEnrolment.id, icon:"Membership expiring",
+            title: d >= 0 ? "Your "+label+" ends in "+d+" day"+(d!==1?"s":"") : "Your "+label+" ended "+(-d)+" day"+(d!==-1?"s":"")+" ago",
+            detail:"Ends "+enrolmentEndDate+" - sign up for the next block to keep your spot",
+            date:enrolmentEndDate, sortKey:enrolmentEndDate, color:"#f59e0b", tab:"calendar",
+          });
+        }
+      }
+    }
+    if (prefs.newTimes !== false) {
+      (member.benchmarks||[]).forEach(function(b) {
+        items.push({
+          id:"bench-"+b.id, icon:"New time logged",
+          title:"New time logged: "+b.event+" - "+b.time,
+          detail:(b.startType==="block"?"Dive start":"Push start")+" - swum "+b.date,
+          date:b.createdDate, sortKey:b.createdDate, color:"#3b82f6", tab:"progress",
+        });
       });
     }
     items.sort(function(a,b){ return (b.sortKey||"").localeCompare(a.sortKey||""); });
@@ -7299,7 +7352,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
               <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
                 {myNotifications.map(function(n) {
                   return (
-                    <div key={n.id} style={{ background:C.panel, border:"1px solid "+C.border, borderLeft:"3px solid "+n.color, borderRadius:2, padding:"12px 16px" }}>
+                    <div key={n.id} onClick={n.tab ? function(){ setTab(n.tab); } : undefined} style={{ background:C.panel, border:"1px solid "+C.border, borderLeft:"3px solid "+n.color, borderRadius:2, padding:"12px 16px", cursor:n.tab?"pointer":"default" }}>
                       <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:n.color, marginBottom:3 }}>{n.icon}</div>
                       <div style={{ fontWeight:700, fontSize:14, color:C.white, marginBottom:n.detail?2:0 }}>{n.title}</div>
                       {n.detail && <div style={{ fontSize:12, color:C.grey, lineHeight:1.5 }}>{n.detail}</div>}
