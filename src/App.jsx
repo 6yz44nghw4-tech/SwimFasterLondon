@@ -4710,22 +4710,30 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
       startType: benchForm.startType || "push",
     };
     api.addBenchmarkForMember(mid, entry).then(function(recorded) {
-      return refreshData().then(function(fresh) { return { recorded:recorded, fresh:fresh }; });
-    }).then(function(result) {
-      if (result.recorded) {
-        const freshMember = (result.fresh.members||[]).find(function(m){ return m.id===mid; });
-        const saved = freshMember && (freshMember.benchmarks||[]).find(function(b){ return b.event===entry.event && b.date===entry.date; });
-        setLastRecordedBenchmark({
-          id: saved ? saved.id : null,
-          memberId: mid,
-          memberName: member ? displayName(member) : "",
-          entry: entry,
-          previousBenchmark: existing || null,
-        });
-      } else {
+      if (!recorded) {
         setBenchmarkFeedback("kept-existing");
         setTimeout(function(){ setBenchmarkFeedback(null); }, 4000);
+        return;
       }
+      // Show the confirmation immediately rather than waiting on the full
+      // ~20-table refreshData() below, which can take a few seconds on a
+      // slow connection and previously left "Record time" looking like it
+      // did nothing until some unrelated click forced a re-render. An
+      // update-in-place already has its row id (existing.id); only a fresh
+      // insert needs the background refresh to learn its new id.
+      setLastRecordedBenchmark({
+        id: existing ? existing.id : null,
+        memberId: mid,
+        memberName: member ? displayName(member) : "",
+        entry: entry,
+        previousBenchmark: existing || null,
+      });
+      if (existing) { refreshData(); return; }
+      refreshData().then(function(fresh) {
+        const freshMember = (fresh.members||[]).find(function(m){ return m.id===mid; });
+        const saved = freshMember && (freshMember.benchmarks||[]).find(function(b){ return b.event===entry.event && b.date===entry.date; });
+        if (saved) setLastRecordedBenchmark(function(lb) { return lb ? Object.assign({}, lb, { id:saved.id }) : lb; });
+      });
     }).catch(function(err) { window.alert("Couldn't add benchmark: " + err.message); });
   }
 
