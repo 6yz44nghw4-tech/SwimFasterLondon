@@ -4617,6 +4617,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   }, []);
   const [justDeletedIds, setJustDeletedIds] = useState([]);
   const [blockFilter, setBlockFilter] = useState("All");
+  const [showOlderSessions, setShowOlderSessions] = useState(false);
   const [expandedBenchMember, setExpandedBenchMember] = useState(null);
   const [editingBenchmark, setEditingBenchmark] = useState(null);
   function startEditBenchmark(b) {
@@ -5747,8 +5748,24 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
             </div>
 
             <div style={{ marginTop:8 }}>
-              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:C.grey, marginBottom:10 }}>Sessions - most recent first</div>
-              {data.sessions.slice().sort(function(a,b) { return b.date.localeCompare(a.date); }).map(function(s) {
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:C.grey, marginBottom:10 }}>Register - latest Friday first</div>
+              {(function() {
+                const todayStr = new Date().toISOString().slice(0,10);
+                const cutoff = new Date(todayStr);
+                cutoff.setDate(cutoff.getDate() - 31);
+                const cutoffStr = cutoff.toISOString().slice(0,10);
+                // Future sessions are already reachable from the calendar grid above -
+                // this list is specifically for taking/fixing registers, which only ever
+                // applies to sessions that have already happened.
+                const pastSessions = data.sessions.filter(function(s) { return s.date <= todayStr; }).slice().sort(function(a,b) { return b.date.localeCompare(a.date); });
+                const olderSessions = pastSessions.filter(function(s) { return s.date < cutoffStr; });
+                const visibleSessions = showOlderSessions ? pastSessions : pastSessions.filter(function(s) { return s.date >= cutoffStr; });
+                return (
+                  <div>
+                    {visibleSessions.length === 0 && (
+                      <div style={{ padding:"16px 0", color:C.greyDark, fontSize:13 }}>No sessions in the last month.</div>
+                    )}
+                    {visibleSessions.map(function(s) {
                 const ac = Object.values(s.attendance||{}).filter(Boolean).length;
                 const el = data.members.filter(function(m) { return m.block===s.block; }).length;
                 const cancelled = s.status==="cancelled";
@@ -5799,7 +5816,15 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                     )}
                   </div>
                 );
-              })}
+                    })}
+                    {olderSessions.length > 0 && (
+                      <button onClick={function(){ setShowOlderSessions(!showOlderSessions); }} style={{ display:"block", width:"100%", background:"transparent", border:"1px solid #333", color:"#bbb", fontWeight:700, fontSize:11, letterSpacing:"0.08em", textTransform:"uppercase", cursor:"pointer", borderRadius:2, padding:"10px 12px", marginTop:8 }}>
+                        {showOlderSessions ? "Hide earlier sessions" : "Show "+olderSessions.length+" earlier session"+(olderSessions.length!==1?"s":"")}
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
               {justDeletedIds.length > 0 && (
                 <div style={{ background:"#0d2b1a", border:"1px solid #166534", borderRadius:2, padding:"10px 14px", marginTop:8, fontSize:12, color:C.green, fontWeight:700 }}>
                   {justDeletedIds.length} session{justDeletedIds.length!==1?"s":""} deleted. This message will clear when you refresh the page.
