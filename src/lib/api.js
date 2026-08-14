@@ -39,6 +39,7 @@ function mapMember(m, related) {
     targetTime: m.target_time || null,
     messagesSeenAt: m.messages_seen_at,
     isTest: !!m.is_test,
+    isGuest: !!m.is_guest,
     benchmarks: (related.benchmarks || []).filter(function (b) { return b.member_id === m.id; }).map(mapBenchmark),
     raceResults: (related.raceResults || []).filter(function (r) { return r.member_id === m.id; }).map(mapRaceResult),
     plannedEvents: (related.plannedEvents || []).filter(function (e) { return e.member_id === m.id; }).map(mapPlannedEvent),
@@ -674,6 +675,23 @@ export async function togglePaymentFlag(memberId, nextPaid) {
 
 export async function deleteMember(memberId) {
   const { error } = await supabase.from("members").delete().eq("id", memberId);
+  if (error) throw error;
+}
+
+// Guests are a lightweight members row (no auth_user_id, no real login) for a
+// swimmer who needs to be on a register or have a time recorded without going
+// through a full application/profile - a trial swimmer or one-off guest.
+// Runs through an RPC (not a direct insert) since any coach should be able to
+// add one, not just the head coach, and members RLS otherwise restricts a
+// direct approved-status insert to the head coach.
+export async function createGuestMember(name, block) {
+  const { data, error } = await supabase.rpc("create_guest_member", { p_name: name, p_block: block || null });
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteGuestMember(memberId) {
+  const { error } = await supabase.rpc("delete_guest_member", { p_member_id: memberId });
   if (error) throw error;
 }
 

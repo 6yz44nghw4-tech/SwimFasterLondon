@@ -4290,9 +4290,17 @@ function MessagesPage({ currentUserId, currentUserName, isCoach, messages, membe
 
 
 
-function AttendanceModal({ session, members, sessionPacks, onClose, onToggle }) {
+function AttendanceModal({ session, members, sessionPacks, onClose, onToggle, onAddGuest, onRemoveGuest }) {
   const [showAll, setShowAll] = useState(false);
+  const [addingGuest, setAddingGuest] = useState(false);
+  const [guestName, setGuestName] = useState("");
   function handleToggleAll() { setShowAll(!showAll); }
+  function submitGuest() {
+    if (!guestName.trim()) return;
+    onAddGuest(guestName.trim());
+    setGuestName("");
+    setAddingGuest(false);
+  }
 
   const eligible = members
     .filter(function(m){ return m.block === session.block; })
@@ -4340,6 +4348,15 @@ function AttendanceModal({ session, members, sessionPacks, onClose, onToggle }) 
         </div>
 
         <div style={{ padding:"10px 18px" }}>
+          {addingGuest ? (
+            <div style={{ display:"flex", gap:8, marginBottom:10, flexWrap:"wrap" }}>
+              <input value={guestName} onChange={function(e){ setGuestName(e.target.value); }} placeholder="Guest's name" autoFocus onKeyDown={function(e){ if (e.key==="Enter") submitGuest(); }} style={{ flex:1, minWidth:140, background:"#161616", border:"1px solid #333", color:"#fff", padding:"9px 12px", fontSize:13, borderRadius:2, outline:"none" }}/>
+              <button onClick={submitGuest} style={S.btnGreen}>Add & mark present</button>
+              <button onClick={function(){ setAddingGuest(false); setGuestName(""); }} style={S.btnGhost}>Cancel</button>
+            </div>
+          ) : (
+            <button onClick={function(){ setAddingGuest(true); }} style={{ display:"block", width:"100%", background:"transparent", border:"1px dashed #444", color:"#bbb", fontWeight:700, fontSize:11, letterSpacing:"0.08em", textTransform:"uppercase", cursor:"pointer", borderRadius:2, padding:"10px 12px", marginBottom:10 }}>{"+"} Add guest swimmer</button>
+          )}
           {list.length === 0 && (
             <p style={{ color:C.grey, fontSize:13, padding:"12px 0" }}>No swimmers in this block.</p>
           )}
@@ -4355,9 +4372,15 @@ function AttendanceModal({ session, members, sessionPacks, onClose, onToggle }) 
                 </div>
                 <Avatar name={m.name} size={34} photo={m.photo}/>
                 <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:700, fontSize:14, color:present ? C.white : C.greyLight }}>{displayName(m)}</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <span style={{ fontWeight:700, fontSize:14, color:present ? C.white : C.greyLight }}>{displayName(m)}</span>
+                    {m.isGuest && <span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:C.amber, border:"1px solid #78350f", borderRadius:1, padding:"1px 5px" }}>Guest</span>}
+                  </div>
                   <div style={{ fontSize:11, color:C.grey }}>{m.block}{!inBlock ? " - different block" : ""}{pack ? " - on session pack ("+(pack.sessionsTotal-pack.sessionsUsed)+" left)" : ""}</div>
                 </div>
+                {m.isGuest && onRemoveGuest && (
+                  <button onClick={function(e){ e.stopPropagation(); onRemoveGuest(m.id); }} style={{ background:"none", border:"none", color:"#ff6b6b", fontSize:11, cursor:"pointer", flexShrink:0 }}>Remove</button>
+                )}
                 <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:present ? C.green : C.grey }}>
                   {present ? "Present" : "-"}
                 </div>
@@ -4569,6 +4592,8 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   const [bankRef, setBankRef] = useState("");
   const [bankSent, setBankSent] = useState({});
   const [benchForm, setBenchForm] = useState({ memberId:"", event:"100m Free", time:"", detailLevel:"time", splits:["","","","","","",""], strokeCounts:["","","","","","",""], strokeCount1:"", strokeCount2:"", split50:"", startType:"push", date:new Date().toISOString().slice(0,10) });
+  const [addingBenchGuest, setAddingBenchGuest] = useState(false);
+  const [benchGuestName, setBenchGuestName] = useState("");
   const [calMonth, setCalMonth] = useState(new Date(2026,6,1));
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [confirmCancelId, setConfirmCancelId] = useState(null);
@@ -4755,6 +4780,19 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
         return Object.assign({}, prev, { attendance: newAtt });
       });
     });
+  }
+
+  function addGuestAndMarkPresent(sessionId, block, name) {
+    if (!name || !name.trim()) return;
+    api.createGuestMember(name.trim(), block).then(function(newId) {
+      return refreshData().then(function() { return newId; });
+    }).then(function(newId) {
+      toggleAttendance(sessionId, newId);
+    }).catch(function(err) { window.alert("Couldn't add guest: " + err.message); });
+  }
+
+  function removeGuestMember(memberId) {
+    api.deleteGuestMember(memberId).then(refreshData).catch(function(err) { window.alert("Couldn't remove guest: " + err.message); });
   }
 
   function updateHallOfRecords(records) {
@@ -4978,7 +5016,20 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   function openDrillAssign() { setDrillAssignMember(profileMember); }
   function closeDrillAssign() { setDrillAssignMember(null); }
 
-  function handleBenchMember(e) { setBenchForm(function(f) { return Object.assign({}, f, { memberId:e.target.value }); }); }
+  function handleBenchMember(e) {
+    if (e.target.value === "__new_guest__") { setAddingBenchGuest(true); return; }
+    setBenchForm(function(f) { return Object.assign({}, f, { memberId:e.target.value }); });
+  }
+  function addGuestForBenchmark(name) {
+    if (!name || !name.trim()) return;
+    api.createGuestMember(name.trim(), null).then(function(newId) {
+      return refreshData().then(function(){ return newId; });
+    }).then(function(newId) {
+      setBenchForm(function(f) { return Object.assign({}, f, { memberId:newId }); });
+      setAddingBenchGuest(false);
+      setBenchGuestName("");
+    }).catch(function(err) { window.alert("Couldn't add guest: " + err.message); });
+  }
   function handleBenchEvent(e) { setBenchForm(function(f) { return Object.assign({}, f, { event:e.target.value }); }); }
   function handleBenchTime(e) { setBenchForm(function(f) { return Object.assign({}, f, { time:e.target.value }); }); }
   function handleBenchDate(e) { setBenchForm(function(f) { return Object.assign({}, f, { date:e.target.value }); }); }
@@ -5025,7 +5076,10 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   function setTabShop() { setTab("shop"); }
 
   const pending = data.applications.filter(function(a) { return a.status === "pending"; }).length;
-  const filtered = blockFilter === "All" ? data.members : data.members.filter(function(m) { return m.block === blockFilter; });
+  // Guests are on the register/benchmarks but deliberately have no profile -
+  // keep them out of the Swimmer Profiles roster.
+  const nonGuestMembers = data.members.filter(function(m) { return !m.isGuest; });
+  const filtered = blockFilter === "All" ? nonGuestMembers : nonGuestMembers.filter(function(m) { return m.block === blockFilter; });
 
   const daysInMonth = function(y,mo) { return new Date(y,mo+1,0).getDate(); };
   const firstDayOfMonth = function(y,mo) { return new Date(y,mo,1).getDay(); };
@@ -5060,6 +5114,8 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
           sessionPacks={data.sessionPacks}
           onClose={closeAttendance}
           onToggle={toggleAttendance}
+          onAddGuest={function(name){ addGuestAndMarkPresent(attendanceSession.id, attendanceSession.block, name); }}
+          onRemoveGuest={removeGuestMember}
         />
       )}
 
@@ -6396,10 +6452,19 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
             <div style={{ background:C.panel, border:"1px solid "+C.border, padding:18, marginBottom:24, borderRadius:2 }}>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
                 <div><label style={S.label}>Swimmer</label>
-                  <select value={benchForm.memberId} onChange={handleBenchMember} style={S.input}>
-                    <option value="" style={{ background:C.panel }}>Select swimmer...</option>
-                    {data.members.map(function(m) { return <option key={m.id} value={m.id} style={{ background:C.panel }}>{m.name}</option>; })}
-                  </select>
+                  {addingBenchGuest ? (
+                    <div style={{ display:"flex", gap:8 }}>
+                      <input value={benchGuestName} onChange={function(e){ setBenchGuestName(e.target.value); }} placeholder="Guest's name" autoFocus onKeyDown={function(e){ if (e.key==="Enter") addGuestForBenchmark(benchGuestName); }} style={{ flex:1, background:"#161616", border:"1px solid #333", color:"#fff", padding:"11px 12px", fontSize:14, borderRadius:2, outline:"none" }}/>
+                      <button onClick={function(){ addGuestForBenchmark(benchGuestName); }} style={S.btnGreen}>Add</button>
+                      <button onClick={function(){ setAddingBenchGuest(false); setBenchGuestName(""); }} style={S.btnGhost}>Cancel</button>
+                    </div>
+                  ) : (
+                    <select value={benchForm.memberId} onChange={handleBenchMember} style={S.input}>
+                      <option value="" style={{ background:C.panel }}>Select swimmer...</option>
+                      {data.members.map(function(m) { return <option key={m.id} value={m.id} style={{ background:C.panel }}>{m.name}{m.isGuest?" (Guest)":""}</option>; })}
+                      <option value="__new_guest__" style={{ background:C.panel }}>{"+"} Add guest swimmer...</option>
+                    </select>
+                  )}
                 </div>
                 <div><label style={S.label}>Event</label>
                   <select value={benchForm.event} onChange={handleBenchEvent} style={S.input}>
@@ -6476,7 +6541,10 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                   <div onClick={function(){ setExpandedBenchMember(isOpen ? null : m.id); }} style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 16px", cursor:"pointer" }}>
                     <Avatar name={m.name} size={32} photo={m.photo}/>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontWeight:700, fontSize:14 }}>{displayName(m)}</div>
+                      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                        <span style={{ fontWeight:700, fontSize:14 }}>{displayName(m)}</span>
+                        {m.isGuest && <span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:C.amber, border:"1px solid #78350f", borderRadius:1, padding:"1px 5px" }}>Guest</span>}
+                      </div>
                       <div style={{ fontSize:12, color:C.grey }}>{m.block} - {m.benchmarks.length} time{m.benchmarks.length!==1?"s":""} recorded</div>
                     </div>
                     <div style={{ fontSize:16, color:C.grey, fontWeight:700, flexShrink:0 }}>{isOpen ? "-" : "+"}</div>
