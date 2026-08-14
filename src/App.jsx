@@ -942,7 +942,8 @@ function ProfileEditField({ label, value, onChange, type, placeholder, multiline
   );
 }
 
-function ProfileTab({ member, raceResults, sessionPacks, onUpdate, onSaveSettings, onDeleteAccount }) {
+function ProfileTab({ member, raceResults, sessionPacks, onUpdate, onSaveSettings, onDeleteAccount, canEdit }) {
+  const editable = canEdit !== false;
   const initial = {
     name:          member.name          || "",
     age:           member.age           || "",
@@ -968,6 +969,7 @@ function ProfileTab({ member, raceResults, sessionPacks, onUpdate, onSaveSetting
     setForm(function(f) { return Object.assign({}, f, { level:e.target.value }); });
   }
   function handleSave() {
+    if (!editable) return;
     onUpdate(Object.assign({}, member, form, { age: form.age ? parseInt(form.age) : null, nickname: form.nickname || null }));
     setEditing(false);
   }
@@ -975,9 +977,10 @@ function ProfileTab({ member, raceResults, sessionPacks, onUpdate, onSaveSetting
     setForm(initial);
     setEditing(false);
   }
-  function startEdit() { setEditing(true); }
+  function startEdit() { if (editable) setEditing(true); }
 
   function handlePhotoChange(e) {
+    if (!editable) return;
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
@@ -987,6 +990,7 @@ function ProfileTab({ member, raceResults, sessionPacks, onUpdate, onSaveSetting
     reader.readAsDataURL(file);
   }
   function removePhoto() {
+    if (!editable) return;
     onUpdate(Object.assign({}, member, { photo: null }));
   }
 
@@ -1011,22 +1015,28 @@ function ProfileTab({ member, raceResults, sessionPacks, onUpdate, onSaveSetting
   return (
     <div>
       <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:20 }}>
-        <label style={{ position:"relative", cursor:"pointer", display:"inline-block" }}>
-          <input type="file" accept="image/*" onChange={handlePhotoChange} style={{ display:"none" }}/>
+        {editable ? (
+          <label style={{ position:"relative", cursor:"pointer", display:"inline-block" }}>
+            <input type="file" accept="image/*" onChange={handlePhotoChange} style={{ display:"none" }}/>
+            <Avatar name={member.name} size={56} photo={member.photo}/>
+            <div style={{ position:"absolute", bottom:-2, right:-2, width:20, height:20, borderRadius:"50%", background:C.red, border:"2px solid "+C.bg, display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <span style={{ fontSize:10, color:"#fff" }}>+</span>
+            </div>
+          </label>
+        ) : (
           <Avatar name={member.name} size={56} photo={member.photo}/>
-          <div style={{ position:"absolute", bottom:-2, right:-2, width:20, height:20, borderRadius:"50%", background:C.red, border:"2px solid "+C.bg, display:"flex", alignItems:"center", justifyContent:"center" }}>
-            <span style={{ fontSize:10, color:"#fff" }}>+</span>
-          </div>
-        </label>
+        )}
         <div style={{ flex:1 }}>
           <span style={S.eyebrow}>My Profile</span>
           <h1 style={{ fontWeight:900, fontSize:"1.6rem", textTransform:"uppercase", marginBottom:2 }}>{member.name}</h1>
           <div style={{ fontSize:13, color:C.grey }}>{"Joined "+member.joined}</div>
-          {member.photo && <button onClick={removePhoto} style={{ background:"none", border:"none", color:C.grey, fontSize:11, textDecoration:"underline", cursor:"pointer", padding:0, marginTop:4 }}>Remove photo</button>}
+          {editable && member.photo && <button onClick={removePhoto} style={{ background:"none", border:"none", color:C.grey, fontSize:11, textDecoration:"underline", cursor:"pointer", padding:0, marginTop:4 }}>Remove photo</button>}
         </div>
-        <button onClick={editing ? handleSave : startEdit} style={{ background:C.red, color:C.white, border:"none", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", padding:"8px 16px", fontSize:11, borderRadius:1 }}>
-          {editing ? "Save" : "Edit"}
-        </button>
+        {editable && (
+          <button onClick={editing ? handleSave : startEdit} style={{ background:C.red, color:C.white, border:"none", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", padding:"8px 16px", fontSize:11, borderRadius:1 }}>
+            {editing ? "Save" : "Edit"}
+          </button>
+        )}
       </div>
 
       {(function() {
@@ -1237,26 +1247,30 @@ function ProfileTab({ member, raceResults, sessionPacks, onUpdate, onSaveSetting
             </div>
           )}
 
-          <div style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, marginTop:16, overflow:"hidden" }}>
-            <div onClick={function(){ setShowSettingsCard(!showSettingsCard); }} style={{ padding:"14px 16px", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-              <div style={{ fontWeight:700, fontSize:14, color:C.white }}>Account settings</div>
-              <span style={{ fontSize:13, color:C.grey }}>{showSettingsCard?"-":"+"}</span>
-            </div>
-            {showSettingsCard && (
-              <div onClick={function(e){ e.stopPropagation(); }} style={{ borderTop:"1px solid "+C.border }}>
-                <SettingsModal
-                  inline={true}
-                  currentEmail={member.email}
-                  currentPassword={member.password}
-                  notifPrefs={member.notifPrefs}
-                  onSave={onSaveSettings}
-                  onDeleteAccount={onDeleteAccount}
-                  onClose={function(){ setShowSettingsCard(false); }}
-                  exportData={Object.assign({}, member, { password:"[hidden]" })}
-                />
+          {editable ? (
+            <div style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, marginTop:16, overflow:"hidden" }}>
+              <div onClick={function(){ setShowSettingsCard(!showSettingsCard); }} style={{ padding:"14px 16px", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                <div style={{ fontWeight:700, fontSize:14, color:C.white }}>Account settings</div>
+                <span style={{ fontSize:13, color:C.grey }}>{showSettingsCard?"-":"+"}</span>
               </div>
-            )}
-          </div>
+              {showSettingsCard && (
+                <div onClick={function(e){ e.stopPropagation(); }} style={{ borderTop:"1px solid "+C.border }}>
+                  <SettingsModal
+                    inline={true}
+                    currentEmail={member.email}
+                    currentPassword={member.password}
+                    notifPrefs={member.notifPrefs}
+                    onSave={onSaveSettings}
+                    onDeleteAccount={onDeleteAccount}
+                    onClose={function(){ setShowSettingsCard(false); }}
+                    exportData={Object.assign({}, member, { password:"[hidden]" })}
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ fontSize:11, color:C.greyDark, marginTop:16 }}>Only the head coach can edit this profile, including account settings and photo.</div>
+          )}
         </div>
       )}
     </div>
@@ -4604,10 +4618,12 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   function handleLogout() { onLogout(); }
 
   function approveApp(app) {
+    if (!isHeadCoach) return;
     api.approveApplication(app.id).then(refreshData).catch(function(err) { window.alert("Couldn't approve application: " + err.message); });
   }
 
   function rejectApp(app) {
+    if (!isHeadCoach) return;
     api.rejectApplication(app.id).then(refreshData).catch(function(err) { window.alert("Couldn't reject application: " + err.message); });
   }
 
@@ -4953,10 +4969,10 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
     return (
       <div style={{ position:"fixed", inset:0, zIndex:500, overflowY:"auto", background:C.bg }}>
         <div style={{ background:"#1a0a0a", borderBottom:"2px solid "+C.red, padding:"8px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:10 }}>
-          <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:C.red }}>Coach - viewing as athlete</span>
+          <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:C.red }}>Coach - viewing as athlete{!isHeadCoach ? " (read only)" : ""}</span>
           <button onClick={function(){ setViewingAsId(null); }} style={{ fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", background:"none", border:"1px solid "+C.red, color:C.red, padding:"4px 12px", borderRadius:1, cursor:"pointer" }}>Back to coach</button>
         </div>
-        <MemberDashboard memberId={viewingAsId} allData={data} setAllData={setData} onLogout={function(){ setViewingAsId(null); }}/>
+        <MemberDashboard memberId={viewingAsId} allData={data} setAllData={setData} refreshData={refreshData} onLogout={function(){ setViewingAsId(null); }} isCoachView={true} readOnly={!isHeadCoach}/>
       </div>
     );
   }
@@ -5325,10 +5341,14 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                   </div>
                   {app.goals && <div style={{ fontSize:13, color:C.grey, fontStyle:"italic", margin:"8px 0", padding:"8px 12px", background:C.bg, borderRadius:2 }}>"{app.goals}"</div>}
                   {app.status === "pending" && (
-                    <div style={{ display:"flex", gap:8, marginTop:12 }}>
-                      <button onClick={function() { approveApp(app); }} style={S.btnGreen}>Approve</button>
-                      <button onClick={function() { rejectApp(app); }} style={{ background:"transparent", border:"1px solid #7f1d1d", color:"#ff6b6b", padding:"8px 14px", fontWeight:700, fontSize:11, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:2 }}>Reject</button>
-                    </div>
+                    isHeadCoach ? (
+                      <div style={{ display:"flex", gap:8, marginTop:12 }}>
+                        <button onClick={function() { approveApp(app); }} style={S.btnGreen}>Approve</button>
+                        <button onClick={function() { rejectApp(app); }} style={{ background:"transparent", border:"1px solid #7f1d1d", color:"#ff6b6b", padding:"8px 14px", fontWeight:700, fontSize:11, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:2 }}>Reject</button>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize:11, color:C.greyDark, marginTop:12 }}>Only the head coach can approve or reject applications.</div>
+                    )
                   )}
                   {app.status === "approved" && (
                     <div style={{ marginTop:12 }}>
@@ -5433,11 +5453,14 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                 )}
               </div>
 
-              <div style={{ padding:"16px 20px", borderTop:"1px solid "+C.border, display:"flex", gap:8 }}>
-                {selectedApplication.status === "pending" && (
+              <div style={{ padding:"16px 20px", borderTop:"1px solid "+C.border, display:"flex", gap:8, alignItems:"center" }}>
+                {selectedApplication.status === "pending" && !isHeadCoach && (
+                  <div style={{ fontSize:11, color:C.greyDark }}>Only the head coach can approve or reject applications.</div>
+                )}
+                {selectedApplication.status === "pending" && isHeadCoach && (
                   <button onClick={function(){ approveApp(selectedApplication); setSelectedApplication(null); }} style={S.btnGreen}>Approve</button>
                 )}
-                {selectedApplication.status === "pending" && (
+                {selectedApplication.status === "pending" && isHeadCoach && (
                   <button onClick={function(){ rejectApp(selectedApplication); setSelectedApplication(null); }} style={{ background:"transparent", border:"1px solid #7f1d1d", color:"#ff6b6b", padding:"10px 20px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:2 }}>Reject</button>
                 )}
                 <button onClick={function(){ setSelectedApplication(null); }} style={{ background:"transparent", border:"1px solid #333", color:"#bbb", padding:"10px 20px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:2, marginLeft:"auto" }}>Close</button>
@@ -6783,7 +6806,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
 }
 
 
-function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout }) {
+function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout, isCoachView, readOnly }) {
   const baseM = allData.members.find(function(m){ return m.id===memberId; });
   const [tab, setTab] = useState("profile");
   const [memberEdits, setMemberEdits] = useState({});
@@ -6821,16 +6844,21 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
   }
 
   function saveSettings(next) {
+    if (readOnly) return;
     if (next.email) api.updateMemberFields(memberId, { email: next.email }).then(refreshData).catch(function(err) { window.alert("Couldn't update email: " + err.message); });
     if (next.password) api.changeMyPassword(next.password).catch(function(err) { window.alert("Couldn't update password: " + err.message); });
     if (next.notifPrefs) api.updateMemberFields(memberId, { notifPrefs: next.notifPrefs }).then(refreshData).catch(function(err) { window.alert("Couldn't save notification preferences: " + err.message); });
-    setShowSettingsCard(false);
   }
 
   function deleteMyAccount() {
-    api.deleteMember(memberId).then(function() { return api.signOut(); }).then(onLogout)
+    if (readOnly) return;
+    // A coach viewing an athlete's account (isCoachView) shares the coach's own
+    // Supabase auth session - signing out here would log the coach themselves
+    // out, not just exit this athlete's profile. Only sign out for a real
+    // self-service deletion, where onLogout doesn't already handle that.
+    const afterDelete = isCoachView ? Promise.resolve() : api.signOut();
+    api.deleteMember(memberId).then(function() { return afterDelete; }).then(onLogout)
       .catch(function(err) { window.alert("Couldn't delete account: " + err.message); });
-    setShowSettingsCard(false);
   }
 
   function completeApplication(formData) {
@@ -7254,7 +7282,8 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout 
           );
         })()}
         {tab === "profile" && (
-          <ProfileTab member={member} raceResults={raceResults} sessionPacks={allData.sessionPacks} onUpdate={function(updated){
+          <ProfileTab member={member} raceResults={raceResults} sessionPacks={allData.sessionPacks} canEdit={!readOnly} onUpdate={function(updated){
+            if (readOnly) return;
             setMemberEdits(updated);
             if (refreshData) api.updateMemberFields(memberId, updated).then(refreshData).catch(function(err) { window.alert("Couldn't save profile: " + err.message); });
           }} onSaveSettings={saveSettings} onDeleteAccount={deleteMyAccount}/>
