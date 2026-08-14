@@ -276,6 +276,24 @@ function toSeconds(t) {
   return parseFloat(s);
 }
 
+// Coaches typing under time pressure want to enter a swim time as plain
+// seconds ("72.5") instead of hunting for the colon ("1:12.5") - this
+// normalizes that shorthand into the m:ss display format used everywhere
+// else, while preserving however many decimal places were actually typed
+// (fmtTime always rounds to one decimal, which would silently drop
+// hundredths a coach may have entered).
+function normalizeSwimTime(raw) {
+  const s = String(raw||"").trim();
+  if (!s || s.indexOf(":") !== -1) return s;
+  const n = parseFloat(s);
+  if (isNaN(n) || n < 60) return s;
+  const decimals = (s.split(".")[1]||"").length;
+  const mins = Math.floor(n / 60);
+  const remSec = n - mins * 60;
+  const secStr = decimals > 0 ? remSec.toFixed(decimals) : String(Math.round(remSec));
+  return mins + ":" + (remSec < 10 ? "0"+secStr : secStr);
+}
+
 function fmtTime(s) {
   if (s >= 60) {
     const m = Math.floor(s / 60);
@@ -4567,6 +4585,9 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   const [packForm, setPackForm] = useState({ memberMode:"existing", memberId:"", newName:"", newEmail:"", sessionsTotal:"10", pricePerSession:"", expiryWeeks:"12", discountCode:"" });
   const [justCreatedPackId, setJustCreatedPackId] = useState(null);
   const [benchmarkFeedback, setBenchmarkFeedback] = useState(null);
+  const [lastRecordedBenchmark, setLastRecordedBenchmark] = useState(null);
+  const [editingRecordedTime, setEditingRecordedTime] = useState(false);
+  const [recordedTimeDraft, setRecordedTimeDraft] = useState("");
   const [editingPackId, setEditingPackId] = useState(null);
   const [editPackForm, setEditPackForm] = useState({ sessionsTotal:"", sessionsUsed:"", pricePerSession:"", expiryDate:"" });
   const [confirmDeletePackId, setConfirmDeletePackId] = useState(null);
@@ -4605,7 +4626,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   function saveEditBenchmark() {
     if (!editingBenchmark) return;
     const eb = editingBenchmark;
-    api.updateBenchmark(eb.id, { date:eb.date, event:eb.event, time:eb.time, startType:eb.startType }).then(function() {
+    api.updateBenchmark(eb.id, { date:eb.date, event:eb.event, time:normalizeSwimTime(eb.time), startType:eb.startType }).then(function() {
       setEditingBenchmark(null);
       return refreshData();
     }).catch(function(err) { window.alert("Couldn't update benchmark: " + err.message); });
@@ -4644,14 +4665,17 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   function addBenchmark() {
     if (!benchForm.memberId || !benchForm.time) return;
     const mid = benchForm.memberId;
+    const normalizedTime = normalizeSwimTime(benchForm.time);
     const wantSplits = benchForm.detailLevel === "splits" || benchForm.detailLevel === "full";
     const wantStrokes = benchForm.detailLevel === "full";
     const cleanSplits = wantSplits ? benchForm.splits.filter(function(s){ return s && s.trim(); }) : [];
     const cleanStrokes = wantStrokes ? benchForm.strokeCounts.filter(function(s){ return s && s.trim(); }).map(function(s){ return parseInt(s); }) : [];
+    const member = data.members.find(function(m){ return m.id===mid; });
+    const existing = member && (member.benchmarks||[]).find(function(b){ return b.event===benchForm.event && b.date===benchForm.date; });
     const entry = {
       date: benchForm.date,
       event: benchForm.event,
-      time: benchForm.time,
+      time: normalizedTime,
       splits: cleanSplits.length > 0 ? benchForm.splits.slice(0, Math.max(1, Math.round((parseInt((benchForm.event.match(/^(\d+)m/)||[])[1]) || 0)/50))) : null,
       strokeCounts: cleanStrokes.length > 0 ? benchForm.strokeCounts.slice(0, Math.max(1, Math.round((parseInt((benchForm.event.match(/^(\d+)m/)||[])[1]) || 0)/50))).map(function(s){ return s ? parseInt(s) : null; }) : null,
       strokeCount1: (benchForm.event==="100m Free" && wantStrokes && benchForm.strokeCounts[0]) ? parseInt(benchForm.strokeCounts[0]) : null,
@@ -4660,12 +4684,56 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
       startType: benchForm.startType || "push",
     };
     api.addBenchmarkForMember(mid, entry).then(function(recorded) {
-      return refreshData().then(function() { return recorded; });
-    }).then(function(recorded) {
-      setBenchmarkFeedback(recorded ? "recorded" : "kept-existing");
-      setTimeout(function(){ setBenchmarkFeedback(null); }, 4000);
+      return refreshData().then(function(fresh) { return { recorded:recorded, fresh:fresh }; });
+    }).then(function(result) {
+      if (result.recorded) {
+        const freshMember = (result.fresh.members||[]).find(function(m){ return m.id===mid; });
+        const saved = freshMember && (freshMember.benchmarks||[]).find(function(b){ return b.event===entry.event && b.date===entry.date; });
+        setLastRecordedBenchmark({
+          id: saved ? saved.id : null,
+          memberId: mid,
+          memberName: member ? displayName(member) : "",
+          entry: entry,
+          previousBenchmark: existing || null,
+        });
+      } else {
+        setBenchmarkFeedback("kept-existing");
+        setTimeout(function(){ setBenchmarkFeedback(null); }, 4000);
+      }
     }).catch(function(err) { window.alert("Couldn't add benchmark: " + err.message); });
-    setBenchForm(function(f) { return Object.assign({}, f, { time:"", strokeCount1:"", strokeCount2:"", split50:"", splits:["","","","","","",""], strokeCounts:["","","","","","",""] }); }); // keep startType and detailLevel
+  }
+
+  function backToRecordForm() {
+    setLastRecordedBenchmark(null);
+    setEditingRecordedTime(false);
+    setBenchForm(function(f) { return Object.assign({}, f, { time:"", strokeCount1:"", strokeCount2:"", split50:"", splits:["","","","","","",""], strokeCounts:["","","","","","",""] }); }); // keep swimmer/event/date/startType/detailLevel
+  }
+
+  function undoLastBenchmark() {
+    if (!lastRecordedBenchmark) return;
+    const lb = lastRecordedBenchmark;
+    if (!lb.id) { backToRecordForm(); return; }
+    const prev = lb.previousBenchmark;
+    const action = prev
+      ? api.updateBenchmark(lb.id, { date:prev.date, event:prev.event, time:prev.time, startType:prev.startType, split50:prev.split50, strokeCount1:prev.strokeCount1, strokeCount2:prev.strokeCount2, splits:prev.splits, strokeCounts:prev.strokeCounts })
+      : api.deleteBenchmark(lb.id);
+    action.then(refreshData).then(backToRecordForm)
+      .catch(function(err) { window.alert("Couldn't undo: " + err.message); });
+  }
+
+  function startEditRecordedTime() {
+    if (!lastRecordedBenchmark) return;
+    setRecordedTimeDraft(lastRecordedBenchmark.entry.time);
+    setEditingRecordedTime(true);
+  }
+
+  function saveEditRecordedTime() {
+    if (!lastRecordedBenchmark || !lastRecordedBenchmark.id) return;
+    const normalized = normalizeSwimTime(recordedTimeDraft);
+    api.updateBenchmark(lastRecordedBenchmark.id, Object.assign({}, lastRecordedBenchmark.entry, { time:normalized })).then(refreshData).then(function() {
+      setLastRecordedBenchmark(function(lb) { return lb ? Object.assign({}, lb, { entry: Object.assign({}, lb.entry, { time:normalized }) }) : lb; });
+      setEditingRecordedTime(false);
+    }).catch(function(err) { window.alert("Couldn't save: " + err.message); });
   }
 
   function toggleAttendance(sessionId, memberId) {
@@ -6274,6 +6342,32 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
 
             {/* '' Record benchmark '' */}
             <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", color:C.grey, marginBottom:12 }}>Record a time</div>
+            {lastRecordedBenchmark ? (
+              <div style={{ background:"#0d2b1a", border:"1px solid #166534", borderRadius:2, padding:24, marginBottom:24, textAlign:"center" }}>
+                <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:C.green, marginBottom:10 }}>{"✓"} Time recorded</div>
+                <div style={{ fontWeight:900, fontSize:22, color:"#fff", marginBottom:4 }}>{lastRecordedBenchmark.memberName}</div>
+                <div style={{ fontSize:14, color:C.grey, marginBottom:18 }}>{lastRecordedBenchmark.entry.event} - {lastRecordedBenchmark.entry.date}</div>
+
+                {editingRecordedTime ? (
+                  <div style={{ display:"flex", gap:8, justifyContent:"center", alignItems:"center", marginBottom:20, flexWrap:"wrap" }}>
+                    <input value={recordedTimeDraft} onChange={function(e){ setRecordedTimeDraft(e.target.value); }} placeholder="58.40" autoFocus style={{ background:"#161616", border:"1px solid #333", color:"#fff", padding:"10px 12px", fontSize:20, fontWeight:900, fontFamily:"monospace", borderRadius:2, outline:"none", width:140, textAlign:"center" }}/>
+                    <button onClick={saveEditRecordedTime} style={S.btnGreen}>Save</button>
+                    <button onClick={function(){ setEditingRecordedTime(false); }} style={S.btnGhost}>Cancel</button>
+                  </div>
+                ) : (
+                  <div style={{ fontWeight:900, fontSize:36, color:C.green, fontFamily:"monospace", marginBottom:20 }}>{lastRecordedBenchmark.entry.time}</div>
+                )}
+
+                {!editingRecordedTime && (
+                  <div style={{ display:"flex", gap:10, justifyContent:"center", marginBottom:20, flexWrap:"wrap" }}>
+                    <button onClick={startEditRecordedTime} style={{ background:"transparent", border:"1px solid #3b82f6", color:"#3b82f6", fontWeight:700, fontSize:12, letterSpacing:"0.06em", textTransform:"uppercase", padding:"10px 20px", borderRadius:2, cursor:"pointer" }}>Edit time</button>
+                    <button onClick={undoLastBenchmark} style={{ background:"transparent", border:"1px solid #7f1d1d", color:"#ff6b6b", fontWeight:700, fontSize:12, letterSpacing:"0.06em", textTransform:"uppercase", padding:"10px 20px", borderRadius:2, cursor:"pointer" }}>Undo</button>
+                  </div>
+                )}
+
+                <button onClick={backToRecordForm} style={{ display:"block", width:"100%", background:C.red, color:"#fff", border:"none", fontWeight:900, fontSize:15, letterSpacing:"0.08em", textTransform:"uppercase", padding:"16px", borderRadius:2, cursor:"pointer" }}>{"‹"} Back</button>
+              </div>
+            ) : (
             <div style={{ background:C.panel, border:"1px solid "+C.border, padding:18, marginBottom:24, borderRadius:2 }}>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
                 <div><label style={S.label}>Swimmer</label>
@@ -6289,7 +6383,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                 </div>
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
-                <div><label style={S.label}>Time (m:ss.hh, e.g. 58.40 or 1:02.10)</label><input value={benchForm.time} onChange={handleBenchTime} placeholder="0:58.40" style={S.input}/></div>
+                <div><label style={S.label}>Time (e.g. 58.40, 72.5, or 1:02.10)</label><input value={benchForm.time} onChange={handleBenchTime} placeholder="58.40" style={S.input}/></div>
                 <div><label style={S.label}>Date</label><input type="date" value={benchForm.date} onChange={handleBenchDate} style={S.input}/></div>
               </div>
               <div style={{ marginBottom:12 }}>
@@ -6344,14 +6438,12 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
               })()}
               <div style={{ display:"flex", alignItems:"center", gap:12 }}>
                 <button onClick={addBenchmark} style={S.btnRed}>Record time</button>
-                {benchmarkFeedback === "recorded" && (
-                  <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:C.green }}>{"✓"} Time recorded</span>
-                )}
                 {benchmarkFeedback === "kept-existing" && (
                   <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:C.amber }}>Kept existing faster time for this day</span>
                 )}
               </div>
             </div>
+            )}
             {data.members.map(function(m) {
               const isOpen = expandedBenchMember === m.id;
               return (
@@ -6380,7 +6472,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                                       <select value={eb.event} onChange={function(e){ setEditingBenchmark(Object.assign({}, eb, { event:e.target.value })); }} style={S.input}>
                                         {["50m Free","100m Free","200m Free","400m Free","50m Back","100m Back","50m Breast","100m Breast","50m Fly","100m Fly","200m IM"].map(function(ev) { return <option key={ev} value={ev} style={{ background:C.panel }}>{ev}</option>; })}
                                       </select>
-                                      <input value={eb.time} onChange={function(e){ setEditingBenchmark(Object.assign({}, eb, { time:e.target.value })); }} placeholder="0:58.40" style={S.input}/>
+                                      <input value={eb.time} onChange={function(e){ setEditingBenchmark(Object.assign({}, eb, { time:e.target.value })); }} placeholder="58.40" style={S.input}/>
                                       <input type="date" value={eb.date} onChange={function(e){ setEditingBenchmark(Object.assign({}, eb, { date:e.target.value })); }} style={S.input}/>
                                       <select value={eb.startType} onChange={function(e){ setEditingBenchmark(Object.assign({}, eb, { startType:e.target.value })); }} style={S.input}>
                                         <option value="push" style={{ background:C.panel }}>Push start</option>
