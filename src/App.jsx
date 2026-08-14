@@ -2350,7 +2350,7 @@ function StarRating({ value, onRate, size }) {
   );
 }
 
-function CakeYourMarksPage({ member, allMembers, bakes, isCoach, onAddBake, onDeleteBake, onRate, onUpdateBakePhoto, onSkipBake }) {
+function CakeYourMarksPage({ member, allMembers, allCoaches, bakes, isCoach, canManageBakes, onAddBake, onDeleteBake, onRate, onUpdateBakePhoto, onSkipBake }) {
   const [expandedBakeId, setExpandedBakeId] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState({ name:"", description:"", date:new Date().toISOString().slice(0,10), photo:null });
@@ -2360,7 +2360,7 @@ function CakeYourMarksPage({ member, allMembers, bakes, isCoach, onAddBake, onDe
 
   const latestBake = bakes.length > 0 ? bakes.slice().sort(function(a,b) { return b.id - a.id; })[0] : null;
   const myLatestRating = latestBake && member ? (latestBake.ratings||{})[member.id] : null;
-  const [showPrompt, setShowPrompt] = useState(!isCoach && !!latestBake && !myLatestRating);
+  const [showPrompt, setShowPrompt] = useState(!canManageBakes && !!latestBake && !myLatestRating);
   const [promptStars, setPromptStars] = useState(0);
   const [promptComment, setPromptComment] = useState("");
 
@@ -2438,7 +2438,7 @@ function CakeYourMarksPage({ member, allMembers, bakes, isCoach, onAddBake, onDe
       <h2 style={{ fontWeight:900, fontSize:"1.6rem", textTransform:"uppercase", marginBottom:4 }}>Cake Your Marks</h2>
       <p style={{ color:C.grey, fontSize:13, marginBottom:20 }}>Rate Esme's weekly Friday bake, see who else loved it, and check the all-time leaderboard.</p>
 
-      {isCoach && (
+      {canManageBakes && (
         <div style={{ marginBottom:20 }}>
           <button onClick={function(){ setShowAdd(!showAdd); }} style={{ background:showAdd?C.panel:"#e01a1a", color:showAdd?C.white:"#fff", border:showAdd?"1px solid "+C.border:"none", padding:"10px 16px", fontWeight:700, fontSize:11, letterSpacing:"0.08em", textTransform:"uppercase", borderRadius:2, cursor:"pointer" }}>{showAdd?"Cancel":"+ Add this week's bake"}</button>
           {showAdd && (
@@ -2639,7 +2639,9 @@ function CakeYourMarksPage({ member, allMembers, bakes, isCoach, onAddBake, onDe
             .filter(function(mid) { return !bake.ratings[mid].skipped; })
             .map(function(mid) {
               const m = (allMembers||[]).find(function(x) { return String(x.id) === String(mid); });
-              return { name: m ? displayName(m) : "Swimmer", stars: bake.ratings[mid].stars, comment: bake.ratings[mid].comment };
+              const c = !m && (allCoaches||[]).find(function(x) { return String(x.id) === String(mid); });
+              const name = m ? displayName(m) : (c ? "Coach "+c.name : "Swimmer");
+              return { name: name, stars: bake.ratings[mid].stars, comment: bake.ratings[mid].comment };
             });
           return (
             <div key={bake.id} style={{ background:isOpen?C.panel:C.bg, border:"1px solid "+(isOpen?C.red+"66":C.border), borderRadius:2, overflow:"hidden" }}>
@@ -2703,7 +2705,7 @@ function CakeYourMarksPage({ member, allMembers, bakes, isCoach, onAddBake, onDe
                     </div>
                   )}
 
-                  {isCoach && (
+                  {canManageBakes && (
                     <div style={{ display:"flex", gap:8, alignItems:"center", marginTop:14, flexWrap:"wrap" }}>
                       <label style={{ cursor:"pointer" }}>
                         <input type="file" accept="image/*" onChange={function(e){
@@ -6835,21 +6837,18 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
 
         {tab === "cake" && (
           <CakeYourMarksPage
-            member={null}
+            member={{ id: currentCoach.id }}
             allMembers={data.members}
+            allCoaches={data.coaches||COACHES_DATA}
             bakes={data.bakes||[]}
             isCoach={true}
-            onAddBake={function(form){
-              api.addBake(form, THE_BAKER).then(refreshData).catch(function(err) { window.alert("Couldn't add bake: " + err.message); });
+            canManageBakes={false}
+            onRate={function(bakeId, stars, comment){
+              api.rateBakeAsCoach(bakeId, currentCoach.id, stars, comment).then(refreshData).catch(function(err) { window.alert("Couldn't save rating: " + err.message); });
             }}
-            onDeleteBake={function(bakeId){
-              api.deleteBake(bakeId).then(refreshData).catch(function(err) { window.alert("Couldn't delete bake: " + err.message); });
+            onSkipBake={function(bakeId){
+              api.skipBakeAsCoach(bakeId, currentCoach.id).then(refreshData).catch(function(err) { window.alert("Couldn't skip: " + err.message); });
             }}
-            onRate={function(){}}
-            onUpdateBakePhoto={function(bakeId, photo){
-              api.updateBakePhoto(bakeId, photo).then(refreshData).catch(function(err) { window.alert("Couldn't update photo: " + err.message); });
-            }}
-            onSkipBake={function(){}}
           />
         )}
 
@@ -7881,8 +7880,10 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
           <CakeYourMarksPage
             member={member}
             allMembers={allData.members}
+            allCoaches={allData.coaches}
             bakes={allData.bakes||[]}
             isCoach={!!member.isBaker}
+            canManageBakes={!!member.isBaker}
             onAddBake={function(form){
               if (!member.isBaker || !refreshData) return;
               api.addBake(form, THE_BAKER).then(refreshData).catch(function(err) { window.alert("Couldn't add bake: " + err.message); });

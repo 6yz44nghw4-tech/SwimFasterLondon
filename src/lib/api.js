@@ -212,7 +212,10 @@ function mapDiscountCode(c) {
 function mapBake(b, ratingsRows) {
   const ratings = {};
   (ratingsRows || []).filter(function (r) { return r.bake_id === b.id; }).forEach(function (r) {
-    ratings[r.member_id] = r.skipped ? { skipped: true } : { stars: r.stars, comment: r.comment || "" };
+    // A rating row belongs to either a member or a coach (bake_ratings_exactly_one_actor) -
+    // keyed on whichever id is set, so the ratings map works the same regardless of who rated.
+    const raterId = r.member_id || r.coach_id;
+    ratings[raterId] = r.skipped ? { skipped: true } : { stars: r.stars, comment: r.comment || "" };
   });
   return { id: b.id, name: b.name, description: b.description || "", bakerName: b.baker_name, date: b.date, photo: b.photo || null, ratings: ratings };
 }
@@ -827,6 +830,21 @@ export async function rateBake(bakeId, memberId, stars, comment) {
 
 export async function skipBake(bakeId, memberId) {
   const { error } = await supabase.from("bake_ratings").upsert({ bake_id: bakeId, member_id: memberId, skipped: true, stars: null }, { onConflict: "bake_id,member_id" });
+  if (error) throw error;
+}
+
+export async function rateBakeAsCoach(bakeId, coachId, stars, comment) {
+  if (stars === null) {
+    const { error } = await supabase.from("bake_ratings").delete().eq("bake_id", bakeId).eq("coach_id", coachId);
+    if (error) throw error;
+    return;
+  }
+  const { error } = await supabase.from("bake_ratings").upsert({ bake_id: bakeId, coach_id: coachId, stars: stars, comment: comment || "", skipped: false }, { onConflict: "bake_id,coach_id" });
+  if (error) throw error;
+}
+
+export async function skipBakeAsCoach(bakeId, coachId) {
+  const { error } = await supabase.from("bake_ratings").upsert({ bake_id: bakeId, coach_id: coachId, skipped: true, stars: null }, { onConflict: "bake_id,coach_id" });
   if (error) throw error;
 }
 
