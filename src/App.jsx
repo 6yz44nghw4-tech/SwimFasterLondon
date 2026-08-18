@@ -4148,8 +4148,9 @@ function MessagesPage({ currentUserId, currentUserName, isCoach, messages, membe
     return "dm:"+pair[0]+":"+pair[1];
   }
 
-  // Only current squad members (approved or legacy/undefined status) can appear or be messaged
-  const currentMembers = (members||[]).filter(function(m) { return m.memberStatus !== "pending" && m.memberStatus !== "rejected"; });
+  // Only current squad members (approved or legacy/undefined status) can appear or be messaged -
+  // Community-tier members aren't part of the Friday squad, so they're excluded here too.
+  const currentMembers = (members||[]).filter(function(m) { return m.memberStatus !== "pending" && m.memberStatus !== "rejected" && m.memberStatus !== "community"; });
 
   const people = currentMembers.map(function(m) {
     return { id: m.id, name: displayName(m), isCoach:false };
@@ -7196,6 +7197,31 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
     });
   }
 
+  function submitFridayApplication(formData) {
+    if (fridayAppSubmittingRef.current) return;
+    fridayAppSubmittingRef.current = true;
+    setFridayAppSubmitting(true);
+    setFridayAppError("");
+    api.applyForFridaysFromCommunity(memberId, formData).then(function() {
+      if (setAllData) {
+        setAllData(function(d) {
+          return Object.assign({}, d, { members: (d.members||[]).map(function(m) {
+            if (m.id !== memberId) return m;
+            return Object.assign({}, m, { memberStatus:"pending", name:formData.name, email:formData.email, mobile:formData.mobile, dob:formData.dob, gender:formData.gender, emergencyName:formData.emergencyName, emergencyPhone:formData.emergencyPhone, level:formData.swimmerType, specialty:formData.strokeRank1, goals:formData.goals, competitions:formData.targetEvent, medicalNotes:formData.medical, bio:formData.goals });
+          }) });
+        });
+      }
+      fridayAppSubmittingRef.current = false;
+      setFridayAppSubmitting(false);
+      setShowApplyForFridays(false);
+      if (refreshData) refreshData();
+    }).catch(function(err) {
+      fridayAppSubmittingRef.current = false;
+      setFridayAppSubmitting(false);
+      setFridayAppError(err.message || "Couldn't submit application. Please try again.");
+    });
+  }
+
   function setRaceResults(next) { setRaceResultsLocal(next); api.replaceRaceResults(memberId, next).then(refreshData).catch(function(err) { window.alert("Couldn't save race results: " + err.message); }); }
   function setPlannedEvents(next) { setPlannedEventsLocal(next); api.replacePlannedEvents(memberId, next).then(refreshData).catch(function(err) { window.alert("Couldn't save events: " + err.message); }); }
   function setTargetTime(next) { setTargetTimeLocal(next); persistField("targetTime", next); }
@@ -7407,6 +7433,10 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
   const [completeAppSubmitting, setCompleteAppSubmitting] = useState(false);
   const [completeAppError, setCompleteAppError] = useState("");
   const completeAppSubmittingRef = useRef(false);
+  const [showApplyForFridays, setShowApplyForFridays] = useState(false);
+  const [fridayAppSubmitting, setFridayAppSubmitting] = useState(false);
+  const [fridayAppError, setFridayAppError] = useState("");
+  const fridayAppSubmittingRef = useRef(false);
 
   if (isPending) {
     return (
@@ -7557,7 +7587,10 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
     }
   });
 
-  const TABS = [["profile","Profile"],["notifications","Notifications"],["resources","Resources"],["progress","Progress"],["events","Events"],["calendar","Blocks"],["records","Records"],["messages","Messages"],["cake","Cake Your Marks"],["shop","Shop"],["pizza","Pizza Night"]];
+  const isCommunityMember = member.memberStatus === "community";
+  const TABS = isCommunityMember
+    ? [["profile","Profile"],["events","Events"],["shop","Shop"]]
+    : [["profile","Profile"],["notifications","Notifications"],["resources","Resources"],["progress","Progress"],["events","Events"],["calendar","Blocks"],["records","Records"],["messages","Messages"],["cake","Cake Your Marks"],["shop","Shop"],["pizza","Pizza Night"]];
 
   return (
     <div style={{ background:C.bg, minHeight:"100vh", fontFamily:"system-ui,sans-serif", color:C.white }}>
@@ -7604,11 +7637,40 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
           );
         })()}
         {tab === "profile" && (
-          <ProfileTab member={member} raceResults={raceResults} sessionPacks={allData.sessionPacks} canEdit={!readOnly} onUpdate={function(updated){
-            if (readOnly) return;
-            setMemberEdits(updated);
-            if (refreshData) api.updateMemberFields(memberId, updated).then(refreshData).catch(function(err) { window.alert("Couldn't save profile: " + err.message); });
-          }} onSaveSettings={saveSettings} onDeleteAccount={deleteMyAccount}/>
+          <div>
+            {isCommunityMember && !readOnly && (
+              <div onClick={function(){ setShowApplyForFridays(true); }} style={{ background:"rgba(224,26,26,0.08)", border:"1px solid #e01a1a", borderRadius:2, padding:"14px 16px", marginBottom:16, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+                <div>
+                  <div style={{ fontSize:13, color:C.white, fontWeight:700, marginBottom:2 }}>Want to join Friday squad sessions?</div>
+                  <div style={{ fontSize:12, color:C.grey }}>Apply here - it only takes a few minutes.</div>
+                </div>
+                <span style={{ fontSize:13, color:C.red }}>{"›"}</span>
+              </div>
+            )}
+            <ProfileTab member={member} raceResults={raceResults} sessionPacks={allData.sessionPacks} canEdit={!readOnly} onUpdate={function(updated){
+              if (readOnly) return;
+              setMemberEdits(updated);
+              if (refreshData) api.updateMemberFields(memberId, updated).then(refreshData).catch(function(err) { window.alert("Couldn't save profile: " + err.message); });
+            }} onSaveSettings={saveSettings} onDeleteAccount={deleteMyAccount}/>
+          </div>
+        )}
+
+        {showApplyForFridays && (
+          <div style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(0,0,0,0.88)", display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"32px 16px", overflow:"auto" }}>
+            <div style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, width:"100%", maxWidth:560, padding:20 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14 }}>
+                <div>
+                  <span style={S.eyebrow}>Membership Application</span>
+                  <h2 style={{ fontWeight:900, fontSize:"1.4rem", textTransform:"uppercase" }}>Apply for the Fridays</h2>
+                </div>
+                <button onClick={function(){ setShowApplyForFridays(false); }} style={{ background:"none", border:"none", color:C.grey, fontSize:22, cursor:"pointer", padding:"0 4px" }}>x</button>
+              </div>
+              {fridayAppError && <div style={{ background:"rgba(224,26,26,0.1)", border:"1px solid #e01a1a", color:"#ff6b6b", padding:"10px 12px", borderRadius:2, fontSize:13, marginBottom:16 }}>{fridayAppError}</div>}
+              <fieldset disabled={fridayAppSubmitting} style={{ border:"none", padding:0, margin:0, opacity:fridayAppSubmitting?0.6:1 }}>
+                <ApplicationForm onSubmit={submitFridayApplication} blocks={allData.blocks||BLOCKS} sessions={allData.sessions||[]} discountCodes={allData.discountCodes||[]} skipAccountStep initialValues={{ name: member.name||"", email: member.email||"", goals: member.goals||"" }} draftKey={"sfl_friday_apply_draft_"+member.id}/>
+              </fieldset>
+            </div>
+          </div>
         )}
 
         {tab === "notifications" && (
@@ -7994,7 +8056,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
   );
 }
 
-function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialValues, draftKey }) {
+function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialValues, draftKey, skipAccountStep }) {
   const EMPTY = {
     name:"", email:"", mobile:"", dob:"", gender:"",
     password:"", confirmPassword:"",
@@ -8020,7 +8082,7 @@ function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialVal
     } catch (e) { return null; }
   })();
   const [step, setStep] = useState(function() {
-    if (!draft) return 0;
+    if (!draft) return skipAccountStep ? 1 : 0;
     // Password is never persisted, so never resume past the step that
     // collects it - otherwise Review/Submit could fire with a blank password.
     return draft.form && draft.form.password ? draft.step : Math.min(draft.step, 1);
@@ -8080,7 +8142,7 @@ function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialVal
 
   function setF(k, v) { setForm(function(f){ const u=Object.assign({},f); u[k]=v; return u; }); }
   function next() { setStep(function(s){ return Math.min(s+1, STEPS.length-1); }); }
-  function back() { setStep(function(s){ return Math.max(s-1, 0); }); }
+  function back() { setStep(function(s){ return Math.max(s-1, skipAccountStep ? 1 : 0); }); }
 
   function handleName(e) { setF("name", e.target.value); }
   function handleEmail(e) { setF("email", e.target.value); }
@@ -8213,7 +8275,7 @@ function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialVal
 
   function isStepValid() {
     if (step===0) return !!form.benchmarkResponse;
-    if (step===1) return form.name.trim() && form.email.trim() && form.mobile.trim() && form.dob.trim() && !!form.gender && (calcAge(form.dob)===null || calcAge(form.dob)>=18) && form.password.length>=6 && form.password===form.confirmPassword;
+    if (step===1) return (skipAccountStep || (form.name.trim() && form.email.trim() && form.password.length>=6 && form.password===form.confirmPassword)) && form.mobile.trim() && form.dob.trim() && !!form.gender && (calcAge(form.dob)===null || calcAge(form.dob)>=18);
     if (step===2) return form.swimmerType && form.timesPerWeek && form.swimmingSince;
     if (step===3) return form.pb100.trim() && form.strokeRank1 && form.strokeRank2 && form.strokeRank3 && form.strokeRank4;
     if (step===4) return form.membershipType==="year" || (form.membershipType==="block" && !!form.selectedBlockId) || (form.membershipType==="pack" && (form.packType==="pack10" || form.selectedSessionDates.length>0));
@@ -8326,15 +8388,19 @@ function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialVal
 
       {step===1 && (
         <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-          <div>
-            <label style={labelStyle}>Full name</label>
-            <input value={form.name} onChange={handleName} placeholder="Your full name" style={inputStyle}/>
-          </div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+          {!skipAccountStep && (
             <div>
-              <label style={labelStyle}>Email address</label>
-              <input type="email" autoComplete="email" value={form.email} onChange={handleEmail} placeholder="your@email.com" style={inputStyle}/>
+              <label style={labelStyle}>Full name</label>
+              <input value={form.name} onChange={handleName} placeholder="Your full name" style={inputStyle}/>
             </div>
+          )}
+          <div style={{ display:"grid", gridTemplateColumns:skipAccountStep?"1fr":"1fr 1fr", gap:12 }}>
+            {!skipAccountStep && (
+              <div>
+                <label style={labelStyle}>Email address</label>
+                <input type="email" autoComplete="email" value={form.email} onChange={handleEmail} placeholder="your@email.com" style={inputStyle}/>
+              </div>
+            )}
             <div>
               <label style={labelStyle}>Mobile number</label>
               <input type="tel" value={form.mobile} onChange={handleMobile} placeholder="07..." style={inputStyle}/>
@@ -8356,6 +8422,7 @@ function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialVal
             </div>
             <div style={{ fontSize:11, color:"#666", marginTop:6, lineHeight:1.6 }}>Used for gender-specific leaderboards and records.</div>
           </div>
+          {!skipAccountStep && (
           <div style={{ borderTop:"1px solid #262626", paddingTop:14, marginTop:4 }}>
             <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#888", marginBottom:10 }}>Set up your account</div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
@@ -8372,6 +8439,7 @@ function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialVal
             {form.password && form.password.length<6 && <div style={{ fontSize:11, color:"#f97316", marginTop:6 }}>Password should be at least 6 characters.</div>}
             {form.confirmPassword && form.password!==form.confirmPassword && <div style={{ fontSize:11, color:"#ff6b6b", marginTop:6 }}>Passwords do not match.</div>}
           </div>
+          )}
           <div style={{ borderTop:"1px solid #262626", paddingTop:14 }}>
             <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#888", marginBottom:10 }}>Emergency contact</div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
@@ -8679,10 +8747,47 @@ function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialVal
       )}
 
       <div style={{ display:"flex", gap:10, marginTop:24 }}>
-        {step > 0 && <button onClick={back} style={btnGhost}>Back</button>}
+        {step > (skipAccountStep ? 1 : 0) && <button onClick={back} style={btnGhost}>Back</button>}
         {step < STEPS.length-1 && <button onClick={handleNext} style={{ background:"#e01a1a", color:"#fff", padding:"11px 22px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", borderRadius:2, cursor:"pointer", opacity:isStepValid()?1:0.4 }}>Continue</button>}
         {step === STEPS.length-1 && <button onClick={handleSubmitForm} style={Object.assign({}, btnRed, { opacity: form.privacyConsent?1:0.4, cursor: form.privacyConsent?"pointer":"default" })} disabled={!form.privacyConsent}>Submit application</button>}
       </div>
+    </div>
+  );
+}
+
+function CommunitySignupForm({ onSubmit }) {
+  const inputStyle = { width:"100%", background:"#161616", border:"1px solid #333", color:"#fff", padding:"11px 12px", fontSize:14, borderRadius:2, outline:"none", boxSizing:"border-box", fontFamily:"inherit" };
+  const labelStyle = { display:"block", fontSize:11, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"#888", marginBottom:6 };
+  const [form, setForm] = useState({ name:"", email:"", password:"", confirmPassword:"", goals:"" });
+  function setF(k, v) { setForm(function(f){ return Object.assign({}, f, { [k]: v }); }); }
+  const isValid = form.name.trim() && form.email.trim() && form.password.length>=6 && form.password===form.confirmPassword;
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+      <div>
+        <label style={labelStyle}>Full name</label>
+        <input value={form.name} onChange={function(e){ setF("name", e.target.value); }} placeholder="Your full name" style={inputStyle}/>
+      </div>
+      <div>
+        <label style={labelStyle}>Email address</label>
+        <input type="email" autoComplete="email" value={form.email} onChange={function(e){ setF("email", e.target.value); }} placeholder="your@email.com" style={inputStyle}/>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+        <div>
+          <label style={labelStyle}>Password</label>
+          <input type="password" autoComplete="new-password" value={form.password} onChange={function(e){ setF("password", e.target.value); }} placeholder="Choose a password" style={inputStyle}/>
+        </div>
+        <div>
+          <label style={labelStyle}>Confirm password</label>
+          <input type="password" autoComplete="new-password" value={form.confirmPassword} onChange={function(e){ setF("confirmPassword", e.target.value); }} placeholder="Re-enter password" style={inputStyle}/>
+        </div>
+      </div>
+      {form.password && form.password.length<6 && <div style={{ fontSize:11, color:"#f97316" }}>Password should be at least 6 characters.</div>}
+      {form.confirmPassword && form.password!==form.confirmPassword && <div style={{ fontSize:11, color:"#ff6b6b" }}>Passwords do not match.</div>}
+      <div>
+        <label style={labelStyle}>Your swimming goals</label>
+        <textarea value={form.goals} onChange={function(e){ setF("goals", e.target.value); }} placeholder="What are you working towards?" rows={3} style={Object.assign({}, inputStyle, { resize:"vertical" })}/>
+      </div>
+      <button onClick={function(){ onSubmit(form); }} disabled={!isValid} style={{ background:"#e01a1a", color:"#fff", padding:"11px 22px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", borderRadius:2, cursor:isValid?"pointer":"default", opacity:isValid?1:0.4, marginTop:4 }}>Join the community</button>
     </div>
   );
 }
@@ -9342,11 +9447,15 @@ function ShopPage({ items, onReserve, onBack, embedded, defaultName, defaultCont
 }
 
 
-function PublicSite({ onLogin, onApply, blocks, sessions, discountCodes, shopItems, onReserveItem, pizzaOrders, pizzaDeadline, pizzaDeliveryFee, onSubmitPizzaOrder, onMarkPizzaPaid, onClearUnpaidPizza }) {
+function PublicSite({ onLogin, onApply, onJoinCommunity, blocks, sessions, discountCodes, shopItems, onReserveItem, pizzaOrders, pizzaDeadline, pizzaDeliveryFee, onSubmitPizzaOrder, onMarkPizzaPaid, onClearUnpaidPizza }) {
   const [submitted, setSubmitted] = useState(false);
   const [applySubmitting, setApplySubmitting] = useState(false);
   const [applyError, setApplyError] = useState("");
   const [showApply, setShowApply] = useState(false);
+  const [showJoinCommunity, setShowJoinCommunity] = useState(false);
+  const [communitySubmitted, setCommunitySubmitted] = useState(false);
+  const [communitySubmitting, setCommunitySubmitting] = useState(false);
+  const [communityError, setCommunityError] = useState("");
   const [showShop, setShowShop] = useState(false);
   const [showPizza, setShowPizza] = useState(false);
   const [showPizzaCodeEntry, setShowPizzaCodeEntry] = useState(false);
@@ -9356,6 +9465,21 @@ function PublicSite({ onLogin, onApply, blocks, sessions, discountCodes, shopIte
 
   function openApply() { setShowApply(true); }
   function closeApply() { setShowApply(false); setSubmitted(false); }
+  function openJoinCommunity() { setShowJoinCommunity(true); }
+  function closeJoinCommunity() { setShowJoinCommunity(false); setCommunitySubmitted(false); }
+
+  function handleCommunitySubmit(formData) {
+    if (!onJoinCommunity) { setCommunitySubmitted(true); return; }
+    setCommunityError("");
+    setCommunitySubmitting(true);
+    onJoinCommunity(formData).then(function() {
+      setCommunitySubmitting(false);
+      setCommunitySubmitted(true);
+    }).catch(function(err) {
+      setCommunitySubmitting(false);
+      setCommunityError(err.message || "Something went wrong signing you up. Please try again.");
+    });
+  }
 
   function handleSubmit(formData) {
     const appPayload = {
@@ -9405,6 +9529,36 @@ function PublicSite({ onLogin, onApply, blocks, sessions, discountCodes, shopIte
               {applyError && <div style={{ background:"rgba(224,26,26,0.1)", border:"1px solid #e01a1a", color:"#ff6b6b", padding:"10px 12px", borderRadius:2, fontSize:13, marginBottom:16 }}>{applyError}</div>}
               <fieldset disabled={applySubmitting} style={{ border:"none", padding:0, margin:0, opacity:applySubmitting?0.6:1 }}>
                 <ApplicationForm onSubmit={handleSubmit} blocks={blocks||BLOCKS} sessions={sessions||[]} discountCodes={discountCodes||[]} draftKey="sfl_apply_draft"/>
+              </fieldset>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (showJoinCommunity) {
+    return (
+      <div style={{ background:C.bg, color:C.white, fontFamily:"system-ui,sans-serif", fontSize:14, minHeight:"100vh" }}>
+        <nav style={{ position:"sticky", top:0, zIndex:100, background:"rgba(10,10,10,0.97)", borderBottom:"1px solid "+C.border, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 20px" }}>
+          <Logo height={50}/>
+          <button onClick={closeJoinCommunity} style={{ background:"transparent", border:"1px solid #333", color:"#bbb", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:2, padding:"8px 14px", fontSize:11 }}>Close</button>
+        </nav>
+        <div style={{ padding:"32px 20px 60px", maxWidth:480, margin:"0 auto" }}>
+          <span style={S.eyebrow}>Free Membership</span>
+          <h2 style={{ fontWeight:900, fontSize:"1.8rem", textTransform:"uppercase", marginBottom:8 }}>Join the Community</h2>
+          <p style={{ color:C.grey, lineHeight:1.7, marginBottom:24 }}>Free access to the shop and the race calendar - see what everyone's swimming, including the Friday squad, and apply for the Fridays any time from your own account.</p>
+          {communitySubmitted ? (
+            <div style={{ background:C.panel, border:"1px solid "+C.border, padding:28, borderRadius:2, textAlign:"center" }}>
+              <div style={{ color:C.red, fontWeight:900, fontSize:20, marginBottom:8 }}>Welcome to the community</div>
+              <p style={{ color:C.grey, lineHeight:1.7, maxWidth:360, margin:"0 auto 20px" }}>Check your inbox for a confirmation link to activate your account, then log in any time with the email and password you just set.</p>
+              <button onClick={closeJoinCommunity} style={{ background:"#e01a1a", color:"#fff", padding:"10px 20px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", borderRadius:2, cursor:"pointer" }}>Back to homepage</button>
+            </div>
+          ) : (
+            <div style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, padding:20 }}>
+              {communityError && <div style={{ background:"rgba(224,26,26,0.1)", border:"1px solid #e01a1a", color:"#ff6b6b", padding:"10px 12px", borderRadius:2, fontSize:13, marginBottom:16 }}>{communityError}</div>}
+              <fieldset disabled={communitySubmitting} style={{ border:"none", padding:0, margin:0, opacity:communitySubmitting?0.6:1 }}>
+                <CommunitySignupForm onSubmit={handleCommunitySubmit}/>
               </fieldset>
             </div>
           )}
@@ -9466,6 +9620,7 @@ function PublicSite({ onLogin, onApply, blocks, sessions, discountCodes, shopIte
         </p>
         <div style={{ display:"flex", gap:10, flexWrap:"wrap", justifyContent:"center" }}>
           <button onClick={openApply} style={{ background:"#e01a1a", color:"#fff", padding:"10px 20px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", borderRadius:2, cursor:"pointer" }}>Apply for a Spot</button>
+          <button onClick={openJoinCommunity} style={{ background:"transparent", color:"#fff", padding:"10px 20px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", border:"1px solid #444", borderRadius:2, cursor:"pointer" }}>Join the Community - Free</button>
         </div>
       </section>
 
@@ -9672,6 +9827,21 @@ export default function App() {
     }
   }
 
+  async function addCommunityMember(formData) {
+    const signUpResult = await api.signUp(formData.email, formData.password);
+    const authUser = signUpResult.user;
+    if (authUser && authUser.identities && authUser.identities.length === 0) {
+      throw new Error("An account already exists for this email. Please use Member Login instead of signing up again - if you don't remember your password, ask your coach to reset it.");
+    }
+    if (!authUser) {
+      throw new Error("Check your inbox to confirm your email, then log in to finish joining the community.");
+    }
+    await api.createCommunityMember(formData, authUser.id);
+    if (signUpResult.session) {
+      await resolveSession(authUser);
+    }
+  }
+
   if (view === "boot") {
     return <div style={{ background:C.bg, minHeight:"100vh" }}/>;
   }
@@ -9705,5 +9875,5 @@ export default function App() {
     );
   }
 
-  return <PublicSite onLogin={function(){ setView("login"); }} onApply={addApplication} blocks={data.blocks||BLOCKS} sessions={data.sessions} discountCodes={data.discountCodes||[]} shopItems={data.shopItems||[]} onReserveItem={reserveShopItem} pizzaOrders={data.pizzaOrders||[]} pizzaDeadline={data.pizzaDeadline} pizzaDeliveryFee={data.pizzaDeliveryFee||0} onSubmitPizzaOrder={submitPizzaOrder} onMarkPizzaPaid={markPizzaPaid} onClearUnpaidPizza={clearUnpaidPizzaOrders}/>;
+  return <PublicSite onLogin={function(){ setView("login"); }} onApply={addApplication} onJoinCommunity={addCommunityMember} blocks={data.blocks||BLOCKS} sessions={data.sessions} discountCodes={data.discountCodes||[]} shopItems={data.shopItems||[]} onReserveItem={reserveShopItem} pizzaOrders={data.pizzaOrders||[]} pizzaDeadline={data.pizzaDeadline} pizzaDeliveryFee={data.pizzaDeliveryFee||0} onSubmitPizzaOrder={submitPizzaOrder} onMarkPizzaPaid={markPizzaPaid} onClearUnpaidPizza={clearUnpaidPizzaOrders}/>;
 }

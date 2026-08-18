@@ -474,6 +474,76 @@ export async function createApplicationAndMember(appData, authUserId) {
   return { applicationId: applicationId, memberId: memberId };
 }
 
+export async function createCommunityMember(formData, authUserId) {
+  const memberId = crypto.randomUUID();
+  const memberRow = {
+    id: memberId,
+    auth_user_id: authUserId,
+    name: formData.name,
+    email: formData.email,
+    member_status: "community",
+    bio: formData.goals || null,
+    goals: formData.goals || null,
+    joined: new Date().toLocaleDateString("en-GB", { month: "short", year: "numeric" }),
+    paid: false,
+  };
+  const { error } = await supabase.from("members").insert(memberRow);
+  if (error) throw error;
+  return { memberId: memberId };
+}
+
+export async function applyForFridaysFromCommunity(memberId, appData) {
+  const applicationId = crypto.randomUUID();
+  const appRow = {
+    id: applicationId,
+    name: appData.name, email: appData.email, mobile: appData.mobile || null, dob: appData.dob || null,
+    gender: appData.gender || null, emergency_name: appData.emergencyName || null, emergency_phone: appData.emergencyPhone || null,
+    swimmer_type: appData.swimmerType || null, times_per_week: appData.timesPerWeek || null, swimming_since: appData.swimmingSince || null,
+    pb_100: appData.pb100 || null, pb_estimated: !!appData.pbEstimated,
+    stroke_rank_1: appData.strokeRank1 || null, stroke_rank_2: appData.strokeRank2 || null,
+    stroke_rank_3: appData.strokeRank3 || null, stroke_rank_4: appData.strokeRank4 || null,
+    kick_rating: appData.kickRating || null, benchmark_response: appData.benchmarkResponse || null,
+    benchmark_avg: appData.benchmarkAvg || null, benchmark_stopped_at: appData.benchmarkStoppedAt || null,
+    goals: appData.goals || null, target_event: appData.targetEvent || null, medical: appData.medical || null,
+    extra: appData.extra || null,
+    membership_type: appData.blockEnrolment ? appData.blockEnrolment.type : null,
+    block_enrolment_block_id: appData.blockEnrolment ? appData.blockEnrolment.blockId : null,
+    price_paid: appData.blockEnrolment ? appData.blockEnrolment.pricePaid : null,
+    discount_code: appData.blockEnrolment ? appData.blockEnrolment.discountCode : null,
+    pack_type: appData.blockEnrolment ? appData.blockEnrolment.packType : null,
+    pack_session_count: appData.blockEnrolment ? appData.blockEnrolment.packSessionCount : null,
+    pack_price_per_session: appData.blockEnrolment ? appData.blockEnrolment.packPricePerSession : null,
+    pack_selected_session_ids: appData.blockEnrolment ? appData.blockEnrolment.packSelectedSessionIds : null,
+    end_date: appData.blockEnrolment ? appData.blockEnrolment.endDate || null : null,
+    payment_status: "pending",
+    status: "pending",
+  };
+  const { error: appError } = await supabase.from("applications").insert(appRow);
+  if (appError) throw appError;
+
+  const memberRow = {
+    application_id: applicationId,
+    name: appData.name,
+    email: appData.email,
+    member_status: "pending",
+    mobile: appData.mobile || null,
+    dob: appData.dob || null,
+    gender: appData.gender || null,
+    emergency_name: appData.emergencyName || null,
+    emergency_phone: appData.emergencyPhone || null,
+    level: appData.swimmerType || null,
+    specialty: appData.strokeRank1 || null,
+    bio: appData.goals || null,
+    goals: appData.goals || null,
+    competitions: appData.targetEvent || null,
+    medical_notes: appData.medical || null,
+  };
+  const { error: memberError } = await supabase.from("members").update(memberRow).eq("id", memberId);
+  if (memberError) throw memberError;
+
+  return { applicationId: applicationId };
+}
+
 export async function approveApplication(applicationId) {
   const { error } = await supabase.rpc("approve_application", { p_application_id: applicationId });
   if (error) throw error;
