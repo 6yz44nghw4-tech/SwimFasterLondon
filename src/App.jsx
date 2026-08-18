@@ -1885,18 +1885,18 @@ const RACE_EVENTS = [
   { id:27, date:"2026-06-13", name:"Cotswold Big Swim Festival (June)", location:"Lake 32, Cotswold Water Park, Gloucestershire", type:"Open water", distances:"750m to 3.8km", link:"https://dbmax.co.uk/events/cotswold-big-swim-festival-june-2026/", deadline:null, org:"DB Max Events" },
   { id:28, date:"2026-06-12", name:"Great North Swim", location:"Lake Windermere, Cumbria", type:"Open water", distances:"Half mile to 10km, plus Swim250 and SwimRun options", link:"https://findarace.com/events/great-north-swim", deadline:null, org:"Great Swim (Great Run Company)" },
   { id:29, date:"2026-06-20", name:"Chillswim Coniston 5.25 Miles End to End", location:"Coniston Water, Cumbria", type:"Open water", distances:"5.25 miles", link:"https://chillswim.com/swim-events/", deadline:null, org:"Chillswim" },
-  { id:30, date:"2026-06-21", name:"Wild Dart Swim and Aquathlon", location:"Stoke Gabriel, River Dart, Devon", type:"Open water", distances:"4km swim, or 4km swim + 10km run aquathlon option", link:"https://findarace.com/events/the-river-dart-swim-run", deadline:null, org:"The River Shack" },
+  { id:30, date:"2026-06-21", name:"Wild Dart Swim and Aquathlon", location:"Stoke Gabriel, River Dart, Devon", type:"Open water", alsoTypes:["Aquathlon"], distances:"4km swim, or 4km swim + 10km run aquathlon option", link:"https://findarace.com/events/the-river-dart-swim-run", deadline:null, org:"The River Shack" },
   { id:31, date:"2026-07-04", name:"Dart 10k Swim", location:"River Dart, Totnes to Dartmouth, Devon", type:"Open water", distances:"10km", link:"https://www.levelwater.org/dart10k", deadline:null, org:"Level Water" },
   { id:32, date:"2026-07-11", name:"Chillswim Ullswater 7.5 Miles End to End", location:"Ullswater, Cumbria", type:"Open water", distances:"7.5 miles", link:"https://chillswim.com/chillswim-ullswater-end-to-end/", deadline:null, org:"Chillswim" },
   { id:33, date:"2026-07-18", name:"Bantham Swoosh", location:"Bantham/Avon Estuary, Devon", type:"Open water", distances:"Approx 1.5 mile tidal swim", link:"https://www.levelwater.org/swoosh-event-info-26", deadline:null, org:"Level Water / Outdoor Swimming Society" },
-  { id:34, date:"2026-08-01", name:"Wales Swimrun", location:"Freshwater East to Saundersfoot, Pembrokeshire", type:"Triathlon", distances:"Approx 7km swim + 22km run (swimrun format)", link:"https://www.activitywalesevents.com/events/swimrun/the-wales-swimrun", deadline:null, org:"Activity Wales Events" },
+  { id:34, date:"2026-08-01", name:"Wales Swimrun", location:"Freshwater East to Saundersfoot, Pembrokeshire", type:"Swimrun", distances:"Approx 7km swim + 22km run (swimrun format)", link:"https://www.activitywalesevents.com/events/swimrun/the-wales-swimrun", deadline:null, org:"Activity Wales Events" },
   { id:35, date:"2026-08-09", name:"Thames Marathon (Henley Swim)", location:"Henley-on-Thames to Marlow, Oxfordshire", type:"Open water", distances:"Half (approx 5.5km), Mid (approx 9km), Full marathon (approx 13km)", link:"https://henleyswim.com/thamesmarathon/", deadline:null, org:"Henley Swim" },
   { id:36, date:"2026-08-15", name:"Go Swim Loch Tay", location:"Taymouth Marina, Loch Tay, Perthshire", type:"Open water", distances:"250m to 10,000m", link:"https://go-swim.uk/", deadline:null, org:"Go Swim" },
   { id:37, date:"2026-08-15", name:"Windermere One Way Swim (WOW)", location:"Fell Foot Park to Borrans Park, Windermere, Cumbria", type:"Open water", distances:"11 miles", link:"https://www.sientries.co.uk/event/windermere-one-way-swim-2026", deadline:null, org:"Windermere One Way / T2 Events" },
-  { id:38, date:"2026-08-29", name:"Go Swim Loch Lomond", location:"Balloch, Loch Lomond", type:"Open water", distances:"250m to 10,000m, plus aquathlon option", link:"https://go-swim.uk/", deadline:null, org:"Go Swim" },
+  { id:38, date:"2026-08-29", name:"Go Swim Loch Lomond", location:"Balloch, Loch Lomond", type:"Open water", alsoTypes:["Aquathlon"], distances:"250m to 10,000m, plus aquathlon option", link:"https://go-swim.uk/", deadline:null, org:"Go Swim" },
   { id:39, date:"2026-09-05", name:"Cotswold Big Swim Festival (September)", location:"Cleveland Lakes, Cotswold Water Park, Gloucestershire", type:"Open water", distances:"750m to 5km", link:"https://dbmax.co.uk/events/cotswold-big-swim-festival-september-2026", deadline:null, org:"DB Max Events" },
   { id:40, date:"2026-09-05", name:"Chillswim Windermere 11 Miles End to End", location:"Fell Foot Park to Waterhead, Windermere, Cumbria", type:"Open water", distances:"11 miles", link:"https://chillswim.com/chillswim-windermere-end-to-end/", deadline:null, org:"Chillswim" },
-  { id:41, date:"2026-09-12", name:"Go Swim Loch Morlich", location:"Aviemore, Loch Morlich", type:"Open water", distances:"250m to 10,000m, plus aquathlon option", link:"https://go-swim.uk/", deadline:null, org:"Go Swim" },
+  { id:41, date:"2026-09-12", name:"Go Swim Loch Morlich", location:"Aviemore, Loch Morlich", type:"Open water", alsoTypes:["Aquathlon"], distances:"250m to 10,000m, plus aquathlon option", link:"https://go-swim.uk/", deadline:null, org:"Go Swim" },
   { id:42, date:"2026-09-19", name:"Swim Serpentine", location:"Hyde Park, London", type:"Open water", distances:"Half mile, 1 mile, 2 miles and more", link:"https://www.londonmarathonevents.co.uk/swim-serpentine/swim", deadline:null, org:"London Marathon Events" },
   { id:43, date:"2026-05-02", name:"Dorney Lake Triathlon (May)", location:"Dorney Lake, Windsor, Berkshire", type:"Triathlon", distances:"SuperSprint 400m / Sprint 750m / Standard 1500m swim", link:"https://www.dorneylakeevents.com/event/dorney-triathlon-2nd-may-2026/", deadline:null, org:"Dorney Lake Events" },
   { id:44, date:"2026-05-17", name:"#51fiver Standard Distance Triathlon", location:"Lake 32, Cotswold Water Park, Gloucestershire", type:"Triathlon", distances:"Standard distance, 1500m swim", link:"https://www.icompete.co.uk/events/51fivercotswoldstandard2026", deadline:null, org:"icompete" },
@@ -1904,11 +1904,11 @@ const RACE_EVENTS = [
   { id:46, date:"2026-06-06", name:"Blenheim Palace Triathlon", location:"Woodstock, Oxfordshire", type:"Triathlon", distances:"SuperSprint 400m / Sprint 750m swim in the Great Lake", link:"https://www.childbereavementuk.org/event/blenheim-palace-triathlon", deadline:null, org:"supertri" },
   { id:47, date:"2026-06-07", name:"Chester Triathlon", location:"Chester, Cheshire", type:"Triathlon", distances:"Multiple distances", link:"https://findarace.com/events/chester-triathlon", deadline:null, org:"Active Leisure Events" },
   { id:48, date:"2026-06-07", name:"Cotswold113 Middle Distance Triathlon", location:"Lake 32, Cotswold Water Park, Gloucestershire", type:"Triathlon", distances:"Middle distance (70.3-equivalent) - 1.9km swim + 90km bike + 21.1km run", link:"https://www.entrycentral.com/cotswold113", deadline:null, org:"113 Events" },
-  { id:49, date:"2026-06-20", name:"Cholmondeley Castle Triathlon & Multisport", location:"Cholmondeley, Cheshire", type:"Triathlon", distances:"Multiple distances incl. aquathlon and aquabike", link:"https://www.castleraceseries.com/events/cholmondeley-castle/", deadline:null, org:"Castle Race Series" },
+  { id:49, date:"2026-06-20", name:"Cholmondeley Castle Triathlon & Multisport", location:"Cholmondeley, Cheshire", type:"Triathlon", alsoTypes:["Aquathlon"], distances:"Multiple distances incl. aquathlon and aquabike", link:"https://www.castleraceseries.com/events/cholmondeley-castle/", deadline:null, org:"Castle Race Series" },
   { id:50, date:"2026-07-12", name:"Cotswold Classic Middle Distance Triathlon", location:"Lake 32, Cotswold Water Park, Gloucestershire", type:"Triathlon", distances:"Middle distance, plus aquabike/bike-run/relay options", link:"https://www.entrycentral.com/cotswoldclassic", deadline:null, org:"113 Events" },
-  { id:51, date:"2026-07-18", name:"Belvoir Castle Triathlon & Multisport", location:"Grantham, Leicestershire", type:"Triathlon", distances:"Multiple distances incl. aquathlon, aquabike, swim/run", link:"https://www.castleraceseries.com/events/belvoir-castle/", deadline:null, org:"Castle Race Series" },
+  { id:51, date:"2026-07-18", name:"Belvoir Castle Triathlon & Multisport", location:"Grantham, Leicestershire", type:"Triathlon", alsoTypes:["Aquathlon","Swimrun"], distances:"Multiple distances incl. aquathlon, aquabike, swim/run", link:"https://www.castleraceseries.com/events/belvoir-castle/", deadline:null, org:"Castle Race Series" },
   { id:52, date:"2026-07-19", name:"Eton Dorney Family Triathlon", location:"Dorney Lake, Windsor, Berkshire", type:"Triathlon", distances:"Family distances", link:"https://findarace.com/events/eton-dorney-family-triathlon", deadline:null, org:"Dorney/Votwo" },
-  { id:53, date:"2026-08-16", name:"British Aquathlon Championships (at Blithfield Triathlon)", location:"Blithfield Reservoir, Staffordshire", type:"Triathlon", distances:"National aquathlon championship - 750m swim + 5km run", link:"https://pma-racing.co.uk/events/blithfield-aquathlon/", deadline:null, org:"British Triathlon / PMA Racing" },
+  { id:53, date:"2026-08-16", name:"British Aquathlon Championships (at Blithfield Triathlon)", location:"Blithfield Reservoir, Staffordshire", type:"Aquathlon", distances:"National aquathlon championship - 750m swim + 5km run", link:"https://pma-racing.co.uk/events/blithfield-aquathlon/", deadline:null, org:"British Triathlon / PMA Racing" },
   { id:54, date:"2026-08-23", name:"Thorpe Park Sprint Triathlon", location:"Chertsey, Surrey", type:"Triathlon", distances:"Sprint - 750m swim (Fleet Lake) + 20km bike + 5km run", link:"https://www.runthrough.co.uk/event/thorpe-park-sprint-triathlon-august-2026", deadline:null, org:"RunThrough" },
   { id:55, date:"2026-09-06", name:"Brighton & Hove Triathlon and Multisport Festival", location:"Hove, East Sussex", type:"Triathlon", distances:"SuperSprint / Sprint / Standard", link:"https://findarace.com/events/brighton-hove-triathlon-and-multisport-festival", deadline:null, org:"British Triathlon listed event" },
   { id:56, date:"2026-09-06", name:"Triathlon Y Bala", location:"Bala, Gwynedd", type:"Triathlon", distances:"Sprint to Legend (70.3-equivalent) distance, swim in Llyn Tegid", link:"https://findarace.com/events/triathlon-y-bala", deadline:null, org:"Always Aim High Events" },
@@ -1931,12 +1931,14 @@ const RACE_EVENTS = [
   { id:73, date:"2026-11-06", name:"OCEANMAN Ayia Napa", location:"Ayia Napa, Cyprus", type:"Open water", distances:"10km, 5km, 2km, plus Kids/Teams/Fins", link:"https://oceanmanswim.com/races/ayia-napa-%C2%B7-cyprus/", deadline:null, org:"OCEANMAN" },
 ];
 
-const RACE_CATS = ["All events","Masters swimming","Open water","Triathlon","IRONMAN","Other"];
+const RACE_CATS = ["All events","Masters swimming","Open water","Triathlon","Swimrun","Aquathlon","IRONMAN","Other"];
 
 const RACE_TYPE_COLORS = {
   "Masters swimming": "#7c3aed",
   "Open water": "#0ea5e9",
   "Triathlon": "#4ade80",
+  "Swimrun": "#f472b6",
+  "Aquathlon": "#fb923c",
   "IRONMAN": "#e01a1a",
   "Other": "#6b7280",
 };
@@ -3412,7 +3414,12 @@ function RaceSearch({ member, plannedEvents, onSave, isCoach, allMembers }) {
     const d = new Date(e.date);
     if (d < TODAY_RACE) return false;
     if (cat === "All events") return true;
-    return e.type === cat;
+    // Some events cover more than one format in a single race (e.g. a
+    // triathlon weekend that also runs an aquathlon) - alsoTypes lets that
+    // one entry surface under every relevant tab instead of being
+    // duplicated into a separate row per format.
+    if (e.type === cat) return true;
+    return (e.alsoTypes||[]).indexOf(cat) !== -1;
   }).sort(function(a,b) { return a.date.localeCompare(b.date); });
 
   const groups = [];
@@ -3500,7 +3507,13 @@ function RaceSearch({ member, plannedEvents, onSave, isCoach, allMembers }) {
                           <div style={{ fontSize:12, color:C.grey }}>{ev.location}</div>
                         </div>
                         <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6, flexShrink:0 }}>
-                          <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:tc, border:"1px solid "+tc+"44", padding:"2px 7px", borderRadius:1, whiteSpace:"nowrap" }}>{ev.type}</div>
+                          <div style={{ display:"flex", gap:4, flexWrap:"wrap", justifyContent:"flex-end" }}>
+                            <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:tc, border:"1px solid "+tc+"44", padding:"2px 7px", borderRadius:1, whiteSpace:"nowrap" }}>{ev.type}</div>
+                            {(ev.alsoTypes||[]).map(function(t) {
+                              const atc = RACE_TYPE_COLORS[t] || RACE_TYPE_COLORS["Other"];
+                              return <div key={t} style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:atc, border:"1px solid "+atc+"44", padding:"2px 7px", borderRadius:1, whiteSpace:"nowrap" }}>{t}</div>;
+                            })}
+                          </div>
                           {signedUp && <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:C.green }}>Signed up</div>}
                           {swimmersFor(ev.id).length > 0 && <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:"#3b82f6" }}>{swimmersFor(ev.id).length} swimmer{swimmersFor(ev.id).length!==1?"s":""} going</div>}
                           <div style={{ fontSize:13, color:C.grey }}>{isOpen?"-":"+"}</div>
