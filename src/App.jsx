@@ -5125,6 +5125,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   function setTabReporting() { setTab("reporting"); }
   function setTabDrills() { setTab("drills"); }
   function setTabRecords() { setTab("records"); }
+  function setTabRaces() { setTab("races"); }
   function setTabNotifications() { setTab("notifications"); }
   function setTabMessages() {
     setTab("messages");
@@ -5488,6 +5489,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
           <button onClick={setTabReporting} style={{ background:"none", border:"none", borderBottom:tab==="reporting" ? "2px solid "+C.red : "2px solid transparent", color:tab==="reporting" ? C.white : C.grey, padding:"10px 12px 8px", fontSize:11, fontWeight:tab==="reporting"?700:400, letterSpacing:"0.06em", textTransform:"uppercase", cursor:"pointer", whiteSpace:"nowrap" }}>Reporting</button>
           <button onClick={setTabDrills} style={{ background:"none", border:"none", borderBottom:tab==="drills" ? "2px solid "+C.red : "2px solid transparent", color:tab==="drills" ? C.white : C.grey, padding:"10px 12px 8px", fontSize:11, fontWeight:tab==="drills"?700:400, letterSpacing:"0.06em", textTransform:"uppercase", cursor:"pointer", whiteSpace:"nowrap" }}>Drills</button>
           <button onClick={setTabRecords} style={{ background:"none", border:"none", borderBottom:tab==="records" ? "2px solid "+C.amber : "2px solid transparent", color:tab==="records" ? C.amber : C.grey, padding:"10px 12px 8px", fontSize:11, fontWeight:tab==="records"?700:400, letterSpacing:"0.06em", textTransform:"uppercase", cursor:"pointer", whiteSpace:"nowrap" }}>Records</button>
+          <button onClick={setTabRaces} style={{ background:"none", border:"none", borderBottom:tab==="races" ? "2px solid "+C.red : "2px solid transparent", color:tab==="races" ? C.white : C.grey, padding:"10px 12px 8px", fontSize:11, fontWeight:tab==="races"?700:400, letterSpacing:"0.06em", textTransform:"uppercase", cursor:"pointer", whiteSpace:"nowrap" }}>Races</button>
           <button onClick={setTabMessages} style={{ background:"none", border:"none", borderBottom:tab==="messages" ? "2px solid "+C.red : "2px solid transparent", color:tab==="messages" ? C.white : C.grey, padding:"10px 12px 8px", fontSize:11, fontWeight:tab==="messages"?700:400, letterSpacing:"0.06em", textTransform:"uppercase", cursor:"pointer", whiteSpace:"nowrap" }}>Messages{unreadMsgCount > 0 && <span style={{ marginLeft:5, background:C.red, color:C.white, borderRadius:"50%", fontSize:9, fontWeight:900, padding:"1px 5px" }}>{unreadMsgCount}</span>}</button>
           <button onClick={setTabCake} style={{ background:"none", border:"none", borderBottom:tab==="cake" ? "2px solid "+C.red : "2px solid transparent", color:tab==="cake" ? C.white : C.grey, padding:"10px 12px 8px", fontSize:11, fontWeight:tab==="cake"?700:400, letterSpacing:"0.06em", textTransform:"uppercase", cursor:"pointer", whiteSpace:"nowrap" }}>Cake Your Marks</button>
           <button onClick={setTabShop} style={{ background:"none", border:"none", borderBottom:tab==="shop" ? "2px solid "+C.red : "2px solid transparent", color:tab==="shop" ? C.white : C.grey, padding:"10px 12px 8px", fontSize:11, fontWeight:tab==="shop"?700:400, letterSpacing:"0.06em", textTransform:"uppercase", cursor:"pointer", whiteSpace:"nowrap" }}>Shop</button>
@@ -6844,6 +6846,17 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
 
         {tab === "drills" && <DrillLibraryPage isCoach={isHeadCoach} onUpdate={updateDrills} drills={data.drillLibrary || DRILLS_DATA}/>}
         {tab === "records" && <HallOfRecords records={data.hallOfRecords || []} members={data.members} blocks={data.blocks || BLOCKS} isCoach={true} onUpdate={updateHallOfRecords} currentMemberId={null}/>}
+        {tab === "races" && (
+          <RaceSearch
+            member={null}
+            allMembers={data.members}
+            isCoach={true}
+            onSave={function(){}}
+            plannedEvents={data.members.reduce(function(acc, m) {
+              return acc.concat((m.plannedEvents||[]).map(function(pe) { return Object.assign({}, pe, { swimmerName: displayName(m) }); }));
+            }, []).sort(function(a,b) { return a.eventDate.localeCompare(b.eventDate); })}
+          />
+        )}
 
         {tab === "notifications" && (
           <div>
