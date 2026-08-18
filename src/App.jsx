@@ -3413,7 +3413,7 @@ function RaceSearch({ member, plannedEvents, onSave, isCoach, allMembers }) {
     if (d < TODAY_RACE) return false;
     if (cat === "All events") return true;
     return e.type === cat;
-  });
+  }).sort(function(a,b) { return a.date.localeCompare(b.date); });
 
   const groups = [];
   const seenMonths = {};
