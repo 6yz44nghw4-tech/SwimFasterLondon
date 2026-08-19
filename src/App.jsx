@@ -4470,6 +4470,11 @@ function LoginPage({ onSuccess, onBack }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState("login");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotError, setForgotError] = useState("");
+  const [forgotSending, setForgotSending] = useState(false);
 
   function handleKeyDown(e) { if (e.key === "Enter") handle(); }
   function handle() {
@@ -4481,6 +4486,55 @@ function LoginPage({ onSuccess, onBack }) {
       setLoading(false);
       setError(err.message === "Invalid login credentials" ? "Email or password not recognised." : (err.message || "Something went wrong signing in."));
     });
+  }
+
+  function openForgot() { setMode("forgot"); setForgotEmail(email); setForgotSent(false); setForgotError(""); }
+  function handleForgotSubmit() {
+    setForgotError("");
+    if (!forgotEmail.trim()) { setForgotError("Enter your email address."); return; }
+    setForgotSending(true);
+    api.resetPasswordForEmail(forgotEmail.trim()).then(function() {
+      setForgotSending(false);
+      setForgotSent(true);
+    }).catch(function(err) {
+      setForgotSending(false);
+      setForgotError(err.message || "Couldn't send the reset email. Please try again.");
+    });
+  }
+
+  if (mode === "forgot") {
+    return (
+      <div style={{ background:C.bg, minHeight:"100vh", fontFamily:"system-ui,sans-serif", color:C.white }}>
+        <div style={{ padding:"16px 20px", borderBottom:"1px solid "+C.border }}>
+          <button onClick={function(){ setMode("login"); }} style={{ background:"none", border:"none", color:C.grey, cursor:"pointer", fontSize:13, padding:0 }}>
+            Back to login
+          </button>
+        </div>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"calc(100vh - 53px)", padding:24 }}>
+          <div style={{ width:"100%", maxWidth:360, textAlign:"center" }}>
+            <div style={{ marginLeft:24 }}><Logo height={210}/></div>
+            <h1 style={{ fontWeight:900, fontSize:"1.6rem", textTransform:"uppercase", margin:"36px 0 4px" }}>Reset Password</h1>
+            {forgotSent ? (
+              <p style={{ color:C.grey, fontSize:13, lineHeight:1.7 }}>Check your inbox for a link to set a new password. It can take a few minutes to arrive.</p>
+            ) : (
+              <div>
+                <p style={{ color:C.grey, fontSize:13, marginBottom:24 }}>Enter your email and we'll send you a link to set a new password.</p>
+                <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+                  <div>
+                    <label style={S.label}>Email</label>
+                    <input type="email" autoComplete="email" value={forgotEmail} onChange={function(e){ setForgotEmail(e.target.value); }} placeholder="your@email.com" style={S.input} onKeyDown={function(e){ if (e.key==="Enter") handleForgotSubmit(); }}/>
+                  </div>
+                  {forgotError && <div style={{ color:"#ff6b6b", fontSize:13 }}>{forgotError}</div>}
+                  <button onClick={handleForgotSubmit} disabled={forgotSending} style={{ background:"#e01a1a", color:"#fff", padding:"10px 20px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", borderRadius:2, cursor:"pointer", opacity:forgotSending ? 0.7 : 1 }}>
+                    {forgotSending ? "Sending..." : "Send reset link"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -4507,6 +4561,9 @@ function LoginPage({ onSuccess, onBack }) {
             {error && <div style={{ color:"#ff6b6b", fontSize:13 }}>{error}</div>}
             <button onClick={handle} disabled={loading} style={{ background:"#e01a1a", color:"#fff", padding:"10px 20px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", borderRadius:2, cursor:"pointer", opacity:loading ? 0.7 : 1 }}>
               {loading ? "Checking..." : "Sign In"}
+            </button>
+            <button onClick={openForgot} style={{ background:"none", border:"none", color:"#3b82f6", fontSize:12, cursor:"pointer", padding:0, marginTop:2 }}>
+              Forgot password?
             </button>
           </div>
         </div>
@@ -4543,6 +4600,51 @@ function ForcePasswordChange({ memberId, onDone }) {
         <Logo height={44}/>
         <h1 style={{ fontWeight:900, fontSize:"1.4rem", textTransform:"uppercase", margin:"28px 0 4px" }}>Set a new password</h1>
         <p style={{ color:C.grey, fontSize:13, marginBottom:24 }}>You're signed in with a temporary password. Choose a new one to continue.</p>
+        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          <div>
+            <label style={S.label}>New password</label>
+            <input type="password" autoComplete="new-password" value={password} onChange={function(e){ setPassword(e.target.value); }} style={S.input}/>
+          </div>
+          <div>
+            <label style={S.label}>Confirm new password</label>
+            <input type="password" autoComplete="new-password" value={confirm} onChange={function(e){ setConfirm(e.target.value); }} style={S.input}/>
+          </div>
+          {error && <div style={{ color:"#ff6b6b", fontSize:13 }}>{error}</div>}
+          <button onClick={handleSave} disabled={saving} style={{ background:"#e01a1a", color:"#fff", padding:"10px 20px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", borderRadius:2, cursor:"pointer", opacity:saving?0.7:1 }}>
+            {saving ? "Saving..." : "Save & continue"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResetPassword({ onDone }) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  function handleSave() {
+    setError("");
+    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
+    if (password !== confirm) { setError("Passwords don't match."); return; }
+    setSaving(true);
+    api.changeMyPassword(password).then(function() {
+      setSaving(false);
+      onDone();
+    }).catch(function(err) {
+      setSaving(false);
+      setError(err.message || "Couldn't update your password. Please try again.");
+    });
+  }
+
+  return (
+    <div style={{ background:C.bg, minHeight:"100vh", fontFamily:"system-ui,sans-serif", color:C.white, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+      <div style={{ width:"100%", maxWidth:360 }}>
+        <Logo height={44}/>
+        <h1 style={{ fontWeight:900, fontSize:"1.4rem", textTransform:"uppercase", margin:"28px 0 4px" }}>Reset your password</h1>
+        <p style={{ color:C.grey, fontSize:13, marginBottom:24 }}>Choose a new password for your account. No need to remember the old one.</p>
         <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
           <div>
             <label style={S.label}>New password</label>
@@ -9744,10 +9846,22 @@ export default function App() {
     }
   }
 
+  const isPasswordRecoveryRef = useRef(false);
+
   useEffect(function() {
     let cancelled = false;
+    // Clicking a "reset password" email link signs the browser in via Supabase's recovery
+    // flow, which fires this event - without catching it here, getSession() below would
+    // treat that as a normal login and drop the user straight into their dashboard with no
+    // chance to actually set a new password.
+    const { data: authListener } = supabase.auth.onAuthStateChange(function(event) {
+      if (event === "PASSWORD_RECOVERY") {
+        isPasswordRecoveryRef.current = true;
+        if (!cancelled) setView("resetPassword");
+      }
+    });
     supabase.auth.getSession().then(function(res) {
-      if (cancelled) return;
+      if (cancelled || isPasswordRecoveryRef.current) return;
       const session = res.data && res.data.session;
       if (session && session.user) {
         resolveSession(session.user).then(function() {
@@ -9760,7 +9874,7 @@ export default function App() {
         loadPublicData().then(function(){ if (!cancelled) setView("site"); });
       }
     });
-    return function() { cancelled = true; };
+    return function() { cancelled = true; authListener.subscription.unsubscribe(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -9848,6 +9962,10 @@ export default function App() {
 
   if (view === "login") {
     return <LoginPage onSuccess={handleLoginSuccess} onBack={function(){ setView("site"); }}/>;
+  }
+
+  if (view === "resetPassword") {
+    return <ResetPassword onDone={handleLoginSuccess}/>;
   }
 
   if (view === "coach") {

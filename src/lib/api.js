@@ -395,6 +395,11 @@ export async function changeMyPassword(newPassword) {
   if (error) throw error;
 }
 
+export async function resetPasswordForEmail(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+  if (error) throw error;
+}
+
 export async function getProfileForAuthUser(authUserId) {
   const [coachRes, memberRes] = await Promise.all([
     supabase.from("coaches").select("*").eq("auth_user_id", authUserId).maybeSingle(),
