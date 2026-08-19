@@ -1938,9 +1938,18 @@ const RACE_EVENTS = [
   { id:71, date:"2026-10-02", name:"OCEANMAN Malta", location:"Ghadira Bay, Mellieha, Malta", type:"Open water", distances:"10km, 5km, 2km, plus Kids/Teams", link:"https://oceanmanswim.com/races/malta", deadline:null, org:"OCEANMAN" },
   { id:72, date:"2026-10-17", name:"OCEANMAN Ibiza", location:"Cala Comte, Ibiza, Spain", type:"Open water", distances:"10km, 5km, 2km, plus Kids/Teams", link:"https://oceanmanswim.com/ibiza-spain/", deadline:null, org:"OCEANMAN" },
   { id:73, date:"2026-11-06", name:"OCEANMAN Ayia Napa", location:"Ayia Napa, Cyprus", type:"Open water", distances:"10km, 5km, 2km, plus Kids/Teams/Fins", link:"https://oceanmanswim.com/races/ayia-napa-%C2%B7-cyprus/", deadline:null, org:"OCEANMAN" },
+  { id:74, date:"2026-11-20", name:"IWSA World Cup Latvia", location:"Liepāja, Latvia", type:"Ice swimming", distances:"Winter swimming World Cup stage, 20-21 Nov", link:"https://iwsa.me/events/", deadline:null, org:"International Winter Swimming Association" },
+  { id:75, date:"2026-12-12", name:"IISA GB Ice Swimming Championships", location:"South Yorkshire, England", type:"Ice swimming", distances:"1000m, 500m, 250m, 200m IM, 100m Free/Breast/Back/Fly, 50m Free/Breast/Back/Fly, relays - 12-13 Dec", link:"https://www.iisa-gb.co.uk/events", deadline:null, org:"Great British Ice Swimming (IISA GB)" },
+  { id:76, date:"2026-12-19", name:"IWSA World Cup Morocco", location:"Ouirgane, Marrakech, Morocco", type:"Ice swimming", distances:"Winter swimming World Cup stage, 19-20 Dec", link:"https://iwsa.me/events/", deadline:null, org:"International Winter Swimming Association" },
+  { id:77, date:"2027-01-09", name:"IWSA World Cup France", location:"Combloux, France", type:"Ice swimming", distances:"Winter swimming World Cup stage, 9-10 Jan", link:"https://iwsa.me/events/", deadline:null, org:"International Winter Swimming Association" },
+  { id:78, date:"2027-01-18", name:"IISA Ice Swimming World Championship - Oradea 2027", location:"Oradea, Romania", type:"Ice swimming", distances:"7th IISA World Championship, Age Group + Para, 18-24 Jan (registration 16-17 Jan)", link:"https://internationaliceswimming.com/oradea-2027-2/", deadline:null, org:"International Ice Swimming Association (IISA)" },
+  { id:79, date:"2027-01-30", name:"UK Cold Water Championship", location:"London, England", type:"Ice swimming", distances:"Winter swimming championship, single day", link:"https://iwsa.me/events/", deadline:null, org:"International Winter Swimming Association" },
+  { id:80, date:"2027-02-03", name:"IWSA World Cup Poland & European Championship", location:"Gdynia, Poland", type:"Ice swimming", distances:"Winter swimming World Cup stage + European Championship, 3-7 Feb", link:"https://iwsa.me/events/", deadline:null, org:"International Winter Swimming Association" },
+  { id:81, date:"2027-02-19", name:"IWSA World Cup Sweden", location:"Skellefteå, Sweden", type:"Ice swimming", distances:"Winter swimming World Cup stage, 19-21 Feb", link:"https://iwsa.me/events/", deadline:null, org:"International Winter Swimming Association" },
+  { id:82, date:"2027-02-26", name:"IWSA World Cup Lithuania", location:"Trakai, Lithuania", type:"Ice swimming", distances:"Winter swimming World Cup stage, 26-28 Feb", link:"https://iwsa.me/events/", deadline:null, org:"International Winter Swimming Association" },
 ];
 
-const RACE_CATS = ["All events","Masters swimming","Open water","Triathlon","Swimrun","Aquathlon","IRONMAN","Other"];
+const RACE_CATS = ["All events","Masters swimming","Open water","Triathlon","Swimrun","Aquathlon","IRONMAN","Ice swimming","Other"];
 
 const RACE_TYPE_COLORS = {
   "Masters swimming": "#7c3aed",
@@ -1949,6 +1958,7 @@ const RACE_TYPE_COLORS = {
   "Swimrun": "#f472b6",
   "Aquathlon": "#fb923c",
   "IRONMAN": "#e01a1a",
+  "Ice swimming": "#38bdf8",
   "Other": "#6b7280",
 };
 
@@ -3596,7 +3606,7 @@ function RaceSearch({ member, plannedEvents, onSave, isCoach, allMembers }) {
       })}
 
       <div style={{ borderTop:"1px solid "+C.border, paddingTop:16, marginTop:8, fontSize:11, color:C.greyDark, lineHeight:1.7 }}>
-        Events sourced from Swim England, IRONMAN, BLDSA and Sportiva Events. Always check official websites for the latest entry information - dates may change.
+        Events sourced from Swim England, IRONMAN, BLDSA, Sportiva Events, IISA and IWSA. Always check official websites for the latest entry information - dates may change.
       </div>
     </div>
   );
