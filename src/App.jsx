@@ -4510,7 +4510,7 @@ function LoginPage({ onSuccess, onBack }) {
             Back to login
           </button>
         </div>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"calc(100vh - 53px)", padding:24 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-start", minHeight:"calc(100vh - 53px)", padding:24, paddingTop:56 }}>
           <div style={{ width:"100%", maxWidth:360, textAlign:"center" }}>
             <div style={{ marginLeft:24 }}><Logo height={210}/></div>
             <h1 style={{ fontWeight:900, fontSize:"1.6rem", textTransform:"uppercase", margin:"36px 0 4px" }}>Reset Password</h1>
@@ -9704,8 +9704,12 @@ function PublicSite({ onLogin, onApply, onJoinCommunity, blocks, sessions, disco
 
   return (
     <div style={{ background:C.bg, color:C.white, fontFamily:"system-ui,sans-serif", fontSize:14 }}>
-      <nav style={{ position:"sticky", top:0, zIndex:100, background:"rgba(10,10,10,0.97)", borderBottom:"1px solid "+C.border, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 20px" }}>
-        <Logo height={50}/>
+      <nav style={{ position:"sticky", top:0, zIndex:100, background:"rgba(10,10,10,0.97)", borderBottom:"1px solid "+C.border, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 20px", overflow:"visible" }}>
+        <div style={{ position:"relative", height:50, display:"flex", alignItems:"center", overflow:"visible" }}>
+          <div style={{ position:"absolute", top:"50%", left:0, transform:"translateY(-50%)" }}>
+            <Logo height={82}/>
+          </div>
+        </div>
         <div style={{ display:"flex", alignItems:"center", gap:20 }}>
           <button onClick={function(){ setShowShop(true); }} style={{ background:"none", border:"none", color:"#999", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", cursor:"pointer", fontSize:12, padding:0 }}>Shop</button>
           <button onClick={onLogin} style={{ background:"transparent", border:"1px solid #333", color:"#bbb", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:2, padding:"8px 22px", fontSize:11, lineHeight:1.5, textAlign:"center" }}>Member<br/>Login</button>
@@ -9846,27 +9850,27 @@ export default function App() {
     }
   }
 
-  const isPasswordRecoveryRef = useRef(false);
-
   useEffect(function() {
     let cancelled = false;
-    // Clicking a "reset password" email link signs the browser in via Supabase's recovery
-    // flow, which fires this event - without catching it here, getSession() below would
-    // treat that as a normal login and drop the user straight into their dashboard with no
-    // chance to actually set a new password.
-    const { data: authListener } = supabase.auth.onAuthStateChange(function(event) {
+    // Driving the initial view off a single onAuthStateChange listener (rather than a
+    // separate getSession() call racing alongside it) matters specifically for the password
+    // recovery link: getSession() and the listener's first event both resolve the same
+    // initial session, but from two independent async chains with no guaranteed order. A
+    // recovery link landed here as two competing writes to `view` - resolveSession's dashboard
+    // routing sometimes finished a beat after PASSWORD_RECOVERY had already set the reset
+    // screen, silently bouncing the user back out of it (reported: happened right as they
+    // tapped into the new-password field, which is just whenever that race lost). One
+    // listener processing INITIAL_SESSION and PASSWORD_RECOVERY in the order Supabase
+    // actually emits them removes the race instead of guarding against it after the fact.
+    const { data: authListener } = supabase.auth.onAuthStateChange(function(event, session) {
+      if (cancelled) return;
       if (event === "PASSWORD_RECOVERY") {
-        isPasswordRecoveryRef.current = true;
-        if (!cancelled) setView("resetPassword");
+        setView("resetPassword");
+        return;
       }
-    });
-    supabase.auth.getSession().then(function(res) {
-      if (cancelled || isPasswordRecoveryRef.current) return;
-      const session = res.data && res.data.session;
+      if (event !== "INITIAL_SESSION") return;
       if (session && session.user) {
-        resolveSession(session.user).then(function() {
-          if (!cancelled && view === "boot") { /* view already set inside resolveSession */ }
-        }).catch(function(err) {
+        resolveSession(session.user).catch(function(err) {
           console.error("Failed to resolve session", err);
           loadPublicData().then(function(){ if (!cancelled) setView("site"); });
         });
