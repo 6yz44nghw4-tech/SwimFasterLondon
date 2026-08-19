@@ -235,6 +235,31 @@ function mapShopItem(i) {
   };
 }
 
+function mapMerchPreorder(p) {
+  return {
+    id: p.id,
+    name: p.name,
+    description: p.description || "",
+    priceText: p.price_text || "",
+    deadline: p.deadline,
+    variants: p.variants || [],
+    status: p.status,
+    createdDate: p.created_date,
+  };
+}
+
+function mapMerchPreorderCommitment(c) {
+  return {
+    id: c.id,
+    preorderId: c.preorder_id,
+    name: c.name,
+    contact: c.contact,
+    variantId: c.variant_id,
+    quantity: c.quantity,
+    committedDate: c.committed_date,
+  };
+}
+
 function mapPizzaOrder(o) {
   return {
     id: o.id,
@@ -266,7 +291,7 @@ function mapDrill(d) {
 // ---------------------------------------------------------------------------
 
 export async function fetchPublicData() {
-  const [blocksRes, sessionsRes, discountCodesRes, shopItemsRes, clubSettingsRes, hallOfRecordsRes, drillLibraryRes] = await Promise.all([
+  const [blocksRes, sessionsRes, discountCodesRes, shopItemsRes, clubSettingsRes, hallOfRecordsRes, drillLibraryRes, merchPreordersRes, merchCommitmentsRes] = await Promise.all([
     supabase.from("blocks").select("*"),
     supabase.from("sessions").select("*").order("date"),
     supabase.from("discount_codes").select("*").eq("active", true),
@@ -274,8 +299,10 @@ export async function fetchPublicData() {
     supabase.from("club_settings").select("*").eq("id", 1).maybeSingle(),
     supabase.from("hall_of_records").select("*"),
     supabase.from("drill_library").select("*"),
+    supabase.from("merch_preorders").select("*"),
+    supabase.from("merch_preorder_commitments").select("*"),
   ]);
-  const firstError = [blocksRes, sessionsRes, discountCodesRes, shopItemsRes, clubSettingsRes, hallOfRecordsRes, drillLibraryRes]
+  const firstError = [blocksRes, sessionsRes, discountCodesRes, shopItemsRes, clubSettingsRes, hallOfRecordsRes, drillLibraryRes, merchPreordersRes, merchCommitmentsRes]
     .find(function (r) { return r.error; });
   if (firstError) throw firstError.error;
 
@@ -290,6 +317,8 @@ export async function fetchPublicData() {
     pizzaDeliveryFee: clubSettingsRes.data ? Number(clubSettingsRes.data.pizza_delivery_fee || 0) : 0,
     hallOfRecords: hallOfRecordsRes.data.map(mapHallOfRecord),
     drillLibrary: drillLibraryRes.data.map(mapDrill),
+    merchPreorders: merchPreordersRes.data.map(mapMerchPreorder),
+    merchPreorderCommitments: merchCommitmentsRes.data.map(mapMerchPreorderCommitment),
   };
 }
 
@@ -299,7 +328,7 @@ export async function fetchAllData() {
     blockEnrolmentsRes, benchmarksRes, raceResultsRes, plannedEventsRes, prescribedDrillsRes,
     blockReportsRes, sessionFeedbackRes, generalCommentsRes, messagesRes, discountCodesRes,
     bakesRes, bakeRatingsRes, shopItemsRes, pizzaOrdersRes, clubSettingsRes, drillLibraryRes,
-    hallOfRecordsRes, memberDirectoryRes,
+    hallOfRecordsRes, memberDirectoryRes, merchPreordersRes, merchCommitmentsRes,
   ] = await Promise.all([
     supabase.from("members").select("*"),
     supabase.from("coaches").select("*"),
@@ -325,6 +354,8 @@ export async function fetchAllData() {
     supabase.from("drill_library").select("*"),
     supabase.from("hall_of_records").select("*"),
     supabase.rpc("get_member_directory"),
+    supabase.from("merch_preorders").select("*"),
+    supabase.from("merch_preorder_commitments").select("*"),
   ]);
 
   const firstError = [
@@ -332,7 +363,7 @@ export async function fetchAllData() {
     blockEnrolmentsRes, benchmarksRes, raceResultsRes, plannedEventsRes, prescribedDrillsRes,
     blockReportsRes, sessionFeedbackRes, generalCommentsRes, messagesRes, discountCodesRes,
     bakesRes, bakeRatingsRes, shopItemsRes, pizzaOrdersRes, clubSettingsRes, drillLibraryRes,
-    hallOfRecordsRes, memberDirectoryRes,
+    hallOfRecordsRes, memberDirectoryRes, merchPreordersRes, merchCommitmentsRes,
   ].find(function (r) { return r.error; });
   if (firstError) throw firstError.error;
 
@@ -381,6 +412,8 @@ export async function fetchAllData() {
         benchmarks: (related.benchmarks || []).filter(function (b) { return b.member_id === m.id; }).map(mapBenchmark),
       };
     }),
+    merchPreorders: merchPreordersRes.data.map(mapMerchPreorder),
+    merchPreorderCommitments: merchCommitmentsRes.data.map(mapMerchPreorderCommitment),
   };
 }
 
@@ -1054,6 +1087,40 @@ export async function updateShopItemStatus(itemId, status) {
 
 export async function deleteShopItem(itemId) {
   const { error } = await supabase.from("shop_items").delete().eq("id", itemId);
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Merch preorders
+// ---------------------------------------------------------------------------
+
+export async function addMerchPreorder(preorder) {
+  const row = {
+    name: preorder.name, description: preorder.description || null, price_text: preorder.priceText || null,
+    deadline: preorder.deadline, variants: preorder.variants || [], status: "open",
+  };
+  const { error } = await supabase.from("merch_preorders").insert(row);
+  if (error) throw error;
+}
+
+export async function updateMerchPreorderStatus(preorderId, status) {
+  const { error } = await supabase.from("merch_preorders").update({ status: status }).eq("id", preorderId);
+  if (error) throw error;
+}
+
+export async function deleteMerchPreorder(preorderId) {
+  const { error } = await supabase.from("merch_preorders").delete().eq("id", preorderId);
+  if (error) throw error;
+}
+
+export async function commitToMerchPreorder(preorderId, name, contact, variantId, quantity) {
+  const row = { preorder_id: preorderId, name: name, contact: contact, variant_id: variantId, quantity: quantity || 1 };
+  const { error } = await supabase.from("merch_preorder_commitments").insert(row);
+  if (error) throw error;
+}
+
+export async function deleteMerchPreorderCommitment(commitmentId) {
+  const { error } = await supabase.from("merch_preorder_commitments").delete().eq("id", commitmentId);
   if (error) throw error;
 }
 

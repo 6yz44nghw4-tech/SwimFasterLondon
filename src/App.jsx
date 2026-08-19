@@ -4798,6 +4798,9 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   const [showAddShopItem, setShowAddShopItem] = useState(false);
   const [shopItemForm, setShopItemForm] = useState({ name:"", description:"", price:"", condition:"used", category:"", newCategory:"", photo:null });
   const [expandedShopItem, setExpandedShopItem] = useState(null);
+  const [showAddMerchPreorder, setShowAddMerchPreorder] = useState(false);
+  const [merchPreorderForm, setMerchPreorderForm] = useState({ name:"", description:"", priceText:"", deadline:"", variants:[{ id:"v1", label:"", photo:null },{ id:"v2", label:"", photo:null }] });
+  const [expandedMerchPreorder, setExpandedMerchPreorder] = useState(null);
   const [packForm, setPackForm] = useState({ memberMode:"existing", memberId:"", newName:"", newEmail:"", sessionsTotal:"10", pricePerSession:"", expiryWeeks:"12", discountCode:"" });
   const [justCreatedPackId, setJustCreatedPackId] = useState(null);
   const [benchmarkFeedback, setBenchmarkFeedback] = useState(null);
@@ -7060,6 +7063,140 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
             <h2 style={{ fontWeight:900, fontSize:"1.6rem", textTransform:"uppercase", marginBottom:4 }}>Shop</h2>
             <p style={{ color:C.grey, fontSize:13, marginBottom:20 }}>Visible to everyone, no login needed. List kit for sale, mark it sold, and see who's reserved what.</p>
 
+            <div style={{ marginBottom:32, paddingBottom:28, borderBottom:"1px solid "+C.border }}>
+              <h3 style={{ fontWeight:900, fontSize:"1.2rem", textTransform:"uppercase", marginBottom:4 }}>Merch Preorders</h3>
+              <p style={{ color:C.grey, fontSize:13, marginBottom:16 }}>Get a headcount before you order stock - people commit to a colour and quantity, no payment taken yet.</p>
+
+              <button onClick={function(){ setShowAddMerchPreorder(!showAddMerchPreorder); }} style={{ display:"block", width:"100%", background:showAddMerchPreorder?C.panel:"#e01a1a", color:showAddMerchPreorder?C.white:"#fff", border:showAddMerchPreorder?"1px solid "+C.border:"none", padding:"12px 16px", fontWeight:700, fontSize:12, letterSpacing:"0.08em", textTransform:"uppercase", borderRadius:2, cursor:"pointer", marginBottom:16 }}>{showAddMerchPreorder?"Cancel":"+ Add preorder"}</button>
+
+              {showAddMerchPreorder && (
+                <div style={{ background:C.panel, border:"1px solid #3b82f6", borderRadius:2, padding:16, marginBottom:20 }}>
+                  <div style={{ marginBottom:10 }}>
+                    <label style={S.label}>Product name</label>
+                    <input value={merchPreorderForm.name} onChange={function(e){ setMerchPreorderForm(function(f){ return Object.assign({}, f, { name:e.target.value }); }); }} placeholder="e.g. Swim Faster London Swim Cap" style={S.input}/>
+                  </div>
+                  <div style={{ marginBottom:10 }}>
+                    <label style={S.label}>Description (optional)</label>
+                    <textarea value={merchPreorderForm.description} onChange={function(e){ setMerchPreorderForm(function(f){ return Object.assign({}, f, { description:e.target.value }); }); }} rows={2} placeholder="Any detail worth including" style={{ width:"100%", background:"#161616", border:"1px solid #333", color:"#fff", padding:"11px 12px", fontSize:14, borderRadius:2, outline:"none", boxSizing:"border-box", fontFamily:"inherit", resize:"vertical" }}/>
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
+                    <div>
+                      <label style={S.label}>Price (optional)</label>
+                      <input value={merchPreorderForm.priceText} onChange={function(e){ setMerchPreorderForm(function(f){ return Object.assign({}, f, { priceText:e.target.value }); }); }} placeholder="e.g. £10-15" style={S.input}/>
+                    </div>
+                    <div>
+                      <label style={S.label}>Preorder deadline</label>
+                      <input type="date" value={merchPreorderForm.deadline} onChange={function(e){ setMerchPreorderForm(function(f){ return Object.assign({}, f, { deadline:e.target.value }); }); }} style={S.input}/>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom:14 }}>
+                    <label style={S.label}>Colours</label>
+                    {merchPreorderForm.variants.map(function(v) {
+                      return (
+                        <div key={v.id} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
+                          <div style={{ width:44, height:44, borderRadius:2, overflow:"hidden", flexShrink:0, background:"#161616" }}>
+                            {v.photo && <img src={v.photo} alt={v.label} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>}
+                          </div>
+                          <input value={v.label} onChange={function(e){ setMerchPreorderForm(function(f){ const variants=f.variants.map(function(x){ return x.id===v.id ? Object.assign({}, x, { label:e.target.value }) : x; }); return Object.assign({}, f, { variants:variants }); }); }} placeholder="e.g. White" style={Object.assign({}, S.input, { flex:1 })}/>
+                          <label style={{ cursor:"pointer", flexShrink:0 }}>
+                            <input type="file" accept="image/*" onChange={function(e){
+                              const file = e.target.files && e.target.files[0];
+                              if (!file) return;
+                              const reader = new FileReader();
+                              reader.onload = function(ev){ setMerchPreorderForm(function(f){ const variants=f.variants.map(function(x){ return x.id===v.id ? Object.assign({}, x, { photo:ev.target.result }) : x; }); return Object.assign({}, f, { variants:variants }); }); };
+                              reader.readAsDataURL(file);
+                            }} style={{ display:"none" }}/>
+                            <span style={{ background:"transparent", border:"1px solid #333", color:"#bbb", padding:"9px 12px", fontWeight:700, fontSize:11, letterSpacing:"0.06em", textTransform:"uppercase", borderRadius:2, display:"inline-block" }}>{v.photo?"Change":"Upload"}</span>
+                          </label>
+                          {merchPreorderForm.variants.length > 1 && (
+                            <button onClick={function(){ setMerchPreorderForm(function(f){ return Object.assign({}, f, { variants:f.variants.filter(function(x){ return x.id!==v.id; }) }); }); }} style={{ background:"none", border:"none", color:"#ff6b6b", fontSize:18, cursor:"pointer", flexShrink:0, padding:0 }}>&times;</button>
+                          )}
+                        </div>
+                      );
+                    })}
+                    <button onClick={function(){ setMerchPreorderForm(function(f){ return Object.assign({}, f, { variants:f.variants.concat([{ id:"v"+Date.now(), label:"", photo:null }]) }); }); }} style={{ background:"none", border:"1px dashed #444", color:"#bbb", fontSize:11, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", padding:"8px 12px", borderRadius:2, cursor:"pointer", width:"100%" }}>+ Add another colour</button>
+                  </div>
+                  <button onClick={function(){
+                    if (!merchPreorderForm.name.trim() || !merchPreorderForm.deadline) return;
+                    const variants = merchPreorderForm.variants.filter(function(v){ return v.label.trim(); }).map(function(v){ return { id:v.id, label:v.label.trim(), photo:v.photo }; });
+                    if (variants.length === 0) return;
+                    api.addMerchPreorder({ name:merchPreorderForm.name.trim(), description:merchPreorderForm.description.trim(), priceText:merchPreorderForm.priceText.trim(), deadline:merchPreorderForm.deadline, variants:variants })
+                      .then(refreshData).catch(function(err) { window.alert("Couldn't add preorder: " + err.message); });
+                    setMerchPreorderForm({ name:"", description:"", priceText:"", deadline:"", variants:[{ id:"v1", label:"", photo:null },{ id:"v2", label:"", photo:null }] });
+                    setShowAddMerchPreorder(false);
+                  }} style={S.btnRed}>Create preorder</button>
+                </div>
+              )}
+
+              {(data.merchPreorders||[]).length > 0 && (
+                <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                  {data.merchPreorders.slice().sort(function(a,b){ return b.createdDate.localeCompare(a.createdDate); }).map(function(p) {
+                    const isOpen = expandedMerchPreorder === p.id;
+                    const commitmentsForP = (data.merchPreorderCommitments||[]).filter(function(c){ return c.preorderId===p.id; });
+                    const totalQty = commitmentsForP.reduce(function(sum,c){ return sum+c.quantity; }, 0);
+                    const byVariant = {};
+                    commitmentsForP.forEach(function(c){ byVariant[c.variantId] = (byVariant[c.variantId]||0) + c.quantity; });
+                    return (
+                      <div key={p.id} style={{ background:isOpen?C.panel:C.bg, border:"1px solid "+(isOpen?C.red+"66":C.border), borderRadius:2, overflow:"hidden" }}>
+                        <div onClick={function(){ setExpandedMerchPreorder(isOpen?null:p.id); }} style={{ padding:"12px 14px", cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}>
+                          <div style={{ display:"flex", gap:4, flexShrink:0 }}>
+                            {p.variants.map(function(v){ return (
+                              <div key={v.id} style={{ width:36, height:36, borderRadius:2, overflow:"hidden", background:"#161616" }}>
+                                {v.photo && <img src={v.photo} alt={v.label} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>}
+                              </div>
+                            ); })}
+                          </div>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ fontWeight:700, fontSize:13, color:C.white }}>{p.name}</div>
+                            <div style={{ fontSize:11, color:C.grey, marginTop:2 }}>{totalQty} committed - deadline {p.deadline}{p.status==="closed" && <span style={{ color:C.greyDark }}> - Closed</span>}</div>
+                          </div>
+                          <span style={{ fontSize:13, color:C.grey }}>{isOpen?"-":"+"}</span>
+                        </div>
+                        {isOpen && (
+                          <div style={{ borderTop:"1px solid "+C.border, padding:14 }}>
+                            <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
+                              {p.variants.map(function(v){
+                                return (
+                                  <div key={v.id} style={{ background:C.bg, border:"1px solid "+C.border, borderRadius:2, padding:"8px 12px" }}>
+                                    <div style={{ fontSize:10, color:C.grey, textTransform:"uppercase", letterSpacing:"0.06em" }}>{v.label}</div>
+                                    <div style={{ fontSize:16, fontWeight:900, color:C.white }}>{byVariant[v.id]||0}</div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {commitmentsForP.length === 0 ? (
+                              <div style={{ fontSize:12, color:C.greyDark, marginBottom:12 }}>No commitments yet.</div>
+                            ) : (
+                              <div style={{ marginBottom:12 }}>
+                                {commitmentsForP.slice().sort(function(a,b){ return a.committedDate.localeCompare(b.committedDate); }).map(function(c) {
+                                  const variant = p.variants.find(function(v){ return v.id===c.variantId; });
+                                  return (
+                                    <div key={c.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, padding:"8px 0", borderBottom:"1px solid "+C.border, fontSize:12 }}>
+                                      <div style={{ flex:1, minWidth:0 }}>
+                                        <span style={{ color:C.white, fontWeight:700 }}>{c.name}</span>
+                                        <span style={{ color:C.grey }}> - {c.contact}</span>
+                                      </div>
+                                      <div style={{ color:C.greyLight, flexShrink:0 }}>{variant?variant.label:c.variantId} x{c.quantity}</div>
+                                      <button onClick={function(){ if (!window.confirm("Remove this commitment?")) return; api.deleteMerchPreorderCommitment(c.id).then(refreshData).catch(function(err){ window.alert("Couldn't remove: "+err.message); }); }} style={{ background:"none", border:"none", color:"#ff6b6b", fontSize:11, cursor:"pointer", flexShrink:0 }}>Remove</button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                              <button onClick={function(){ api.updateMerchPreorderStatus(p.id, p.status==="open"?"closed":"open").then(refreshData).catch(function(err){ window.alert("Couldn't update: "+err.message); }); }} style={S.btnGhost}>{p.status==="open"?"Close preorder":"Reopen preorder"}</button>
+                              <button onClick={function(){ if (!window.confirm("Delete this preorder and all its commitments?")) return; api.deleteMerchPreorder(p.id).then(refreshData).catch(function(err){ window.alert("Couldn't delete: "+err.message); }); }} style={{ background:"transparent", border:"1px solid #7f1d1d", color:"#ff6b6b", padding:"10px 20px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:2 }}>Delete preorder</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <h3 style={{ fontWeight:900, fontSize:"1.2rem", textTransform:"uppercase", marginBottom:12 }}>Second-Hand Kit</h3>
             <button onClick={function(){ setShowAddShopItem(!showAddShopItem); }} style={{ display:"block", width:"100%", background:showAddShopItem?C.panel:"#e01a1a", color:showAddShopItem?C.white:"#fff", border:showAddShopItem?"1px solid "+C.border:"none", padding:"12px 16px", fontWeight:700, fontSize:12, letterSpacing:"0.08em", textTransform:"uppercase", borderRadius:2, cursor:"pointer", marginBottom:16 }}>{showAddShopItem?"Cancel":"+ Add item for sale"}</button>
 
             {showAddShopItem && (
@@ -7401,6 +7538,11 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
   function reserveShopItemAsMember(itemId, name, contact) {
     if (!refreshData) return;
     api.reserveShopItem(itemId, name, contact).then(refreshData).catch(function(err) { window.alert("Couldn't reserve item: " + err.message); });
+  }
+
+  function commitToMerchPreorderAsMember(preorderId, name, contact, variantId, quantity) {
+    if (!refreshData) return;
+    api.commitToMerchPreorder(preorderId, name, contact, variantId, quantity).then(refreshData).catch(function(err) { window.alert("Couldn't submit preorder: " + err.message); });
   }
 
   function submitPizzaOrderAsMember(order) {
@@ -8166,7 +8308,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
 
         {tab === "shop" && (
           <div>
-            <ShopPage items={allData.shopItems||[]} onReserve={reserveShopItemAsMember} embedded={true} defaultName={member.name} defaultContact={member.email}/>
+            <ShopPage items={allData.shopItems||[]} onReserve={reserveShopItemAsMember} embedded={true} defaultName={member.name} defaultContact={member.email} preorders={allData.merchPreorders||[]} commitments={allData.merchPreorderCommitments||[]} onCommit={commitToMerchPreorderAsMember}/>
           </div>
         )}
 
@@ -9440,17 +9582,23 @@ function PizzaNightPage({ orders, deadline, deliveryFee, onSubmitOrder, onMarkPa
 }
 
 
-function ShopPage({ items, onReserve, onBack, embedded, defaultName, defaultContact }) {
+function ShopPage({ items, onReserve, onBack, embedded, defaultName, defaultContact, preorders, commitments, onCommit }) {
   const [selectedItem, setSelectedItem] = useState(null);
   const [reserveForm, setReserveForm] = useState({ name:defaultName||"", contact:defaultContact||"" });
   const [reserved, setReserved] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [selectedPreorder, setSelectedPreorder] = useState(null);
+  const [commitForm, setCommitForm] = useState({ name:defaultName||"", contact:defaultContact||"", variantId:"", quantity:1 });
+  const [committed, setCommitted] = useState(false);
 
   const categories = ["All"].concat(Array.from(new Set(items.map(function(i){ return i.category; }))));
   const visibleItems = items
     .filter(function(i){ return categoryFilter==="All" || i.category===categoryFilter; })
     .slice()
     .sort(function(a,b){ return b.createdDate.localeCompare(a.createdDate); });
+
+  const todayStr = new Date().toISOString().slice(0,10);
+  const openPreorders = (preorders||[]).filter(function(p){ return p.status==="open" && p.deadline>=todayStr; });
 
   function openItem(item) {
     setSelectedItem(item);
@@ -9465,11 +9613,56 @@ function ShopPage({ items, onReserve, onBack, embedded, defaultName, defaultCont
     setReserved(true);
   }
 
+  function openPreorder(p) {
+    setSelectedPreorder(p);
+    setCommitForm({ name:defaultName||"", contact:defaultContact||"", variantId:(p.variants&&p.variants[0]?p.variants[0].id:""), quantity:1 });
+    setCommitted(false);
+  }
+  function closePreorder() { setSelectedPreorder(null); }
+
+  function submitCommit() {
+    if (!commitForm.name.trim() || !commitForm.contact.trim() || !commitForm.variantId) return;
+    onCommit(selectedPreorder.id, commitForm.name.trim(), commitForm.contact.trim(), commitForm.variantId, commitForm.quantity);
+    setCommitted(true);
+  }
+
   const content = (
     <div>
       <div style={{ padding: embedded ? "0" : "32px 20px 60px", maxWidth:900, margin:"0 auto" }}>
         <span style={S.eyebrow}>Kit &amp; Gear</span>
         <h2 style={{ fontWeight:900, fontSize:"1.8rem", textTransform:"uppercase", marginBottom:8 }}>Shop</h2>
+
+        {openPreorders.length > 0 && (
+          <div style={{ marginBottom:32 }}>
+            <span style={S.eyebrow}>New</span>
+            <h3 style={{ fontWeight:900, fontSize:"1.3rem", textTransform:"uppercase", marginBottom:10 }}>Merch Preorders</h3>
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              {openPreorders.map(function(p) {
+                const totalCommitted = (commitments||[]).filter(function(c){ return c.preorderId===p.id; }).reduce(function(sum,c){ return sum+c.quantity; }, 0);
+                return (
+                  <div key={p.id} style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, padding:16, display:"flex", gap:14, alignItems:"center", flexWrap:"wrap" }}>
+                    <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                      {(p.variants||[]).map(function(v) {
+                        return (
+                          <div key={v.id} style={{ width:64, height:64, borderRadius:2, overflow:"hidden", background:"#161616" }}>
+                            {v.photo && <img src={v.photo} alt={v.label} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{ flex:1, minWidth:180 }}>
+                      <div style={{ fontWeight:700, fontSize:15, color:"#fff", marginBottom:2 }}>{p.name}</div>
+                      {p.priceText && <div style={{ fontWeight:900, fontSize:15, color:"#f59e0b", marginBottom:2 }}>{p.priceText}</div>}
+                      {p.description && <div style={{ fontSize:12, color:C.grey, lineHeight:1.5, marginBottom:4 }}>{p.description}</div>}
+                      <div style={{ fontSize:11, color:C.greyDark }}>Preorder by {p.deadline} - {totalCommitted} committed so far</div>
+                    </div>
+                    <button onClick={function(){ openPreorder(p); }} style={{ background:"#e01a1a", color:"#fff", border:"none", padding:"10px 18px", fontWeight:700, fontSize:12, letterSpacing:"0.08em", textTransform:"uppercase", borderRadius:2, cursor:"pointer", flexShrink:0 }}>Preorder</button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <p style={{ color:C.grey, lineHeight:1.7, marginBottom:24, maxWidth:520 }}>Pre-loved and new swimming kit - fins, paddles, and the occasional bit of swimwear. Reserve an item below and we'll be in touch to arrange payment and collection. No account needed - open to anyone.</p>
 
         <div style={{ display:"flex", gap:8, marginBottom:24, flexWrap:"wrap" }}>
@@ -9552,6 +9745,61 @@ function ShopPage({ items, onReserve, onBack, embedded, defaultName, defaultCont
           </div>
         </div>
       )}
+
+      {selectedPreorder && (
+        <div onClick={closePreorder} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", zIndex:200, display:"flex", alignItems:"flex-start", justifyContent:"center", overflowY:"auto", padding:"20px 16px" }}>
+          <div onClick={function(e){ e.stopPropagation(); }} style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, maxWidth:440, width:"100%", marginTop:20, marginBottom:20, padding:"20px" }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:6 }}>
+              <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"#f59e0b" }}>Preorder</div>
+              <button onClick={closePreorder} style={{ background:"none", border:"none", color:"#888", fontSize:20, cursor:"pointer", lineHeight:1, padding:0 }}>&times;</button>
+            </div>
+            <div style={{ fontWeight:900, fontSize:"1.2rem", color:"#fff", marginBottom:4 }}>{selectedPreorder.name}</div>
+            {selectedPreorder.priceText && <div style={{ fontWeight:900, fontSize:18, color:"#f59e0b", marginBottom:10 }}>{selectedPreorder.priceText}</div>}
+            {selectedPreorder.description && <div style={{ fontSize:13, color:"#ccc", lineHeight:1.6, marginBottom:14 }}>{selectedPreorder.description}</div>}
+
+            {committed ? (
+              <div style={{ fontSize:13, color:"#22c55e", background:"#0d2b1a", border:"1px solid #166534", borderRadius:2, padding:"12px 14px" }}>You're on the list! No payment needed yet - we'll be in touch using the contact details you gave us once the order's confirmed.</div>
+            ) : (
+              <div>
+                <div style={{ fontSize:11, color:"#888", marginBottom:14, lineHeight:1.6 }}>Commit to buying one - no payment now. We'll follow up on price and payment once the preorder closes on {selectedPreorder.deadline}.</div>
+                <div style={{ marginBottom:12 }}>
+                  <label style={S.label}>Colour</label>
+                  <div style={{ display:"flex", gap:8 }}>
+                    {(selectedPreorder.variants||[]).map(function(v) {
+                      const active = commitForm.variantId===v.id;
+                      return (
+                        <div key={v.id} onClick={function(){ setCommitForm(function(f){ return Object.assign({}, f, { variantId:v.id }); }); }} style={{ cursor:"pointer", textAlign:"center" }}>
+                          <div style={{ width:60, height:60, borderRadius:2, overflow:"hidden", background:"#161616", border:"2px solid "+(active?"#e01a1a":"transparent") }}>
+                            {v.photo && <img src={v.photo} alt={v.label} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>}
+                          </div>
+                          <div style={{ fontSize:10, color:active?"#fff":"#888", marginTop:4, fontWeight:active?700:400 }}>{v.label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div style={{ marginBottom:12 }}>
+                  <label style={S.label}>Quantity</label>
+                  <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                    <button onClick={function(){ setCommitForm(function(f){ return Object.assign({}, f, { quantity:Math.max(1, f.quantity-1) }); }); }} style={{ width:32, height:32, background:"transparent", border:"1px solid #333", color:"#fff", borderRadius:2, cursor:"pointer", fontSize:16 }}>-</button>
+                    <span style={{ fontSize:15, fontWeight:700, color:"#fff", minWidth:20, textAlign:"center" }}>{commitForm.quantity}</span>
+                    <button onClick={function(){ setCommitForm(function(f){ return Object.assign({}, f, { quantity:f.quantity+1 }); }); }} style={{ width:32, height:32, background:"transparent", border:"1px solid #333", color:"#fff", borderRadius:2, cursor:"pointer", fontSize:16 }}>+</button>
+                  </div>
+                </div>
+                <div style={{ marginBottom:10 }}>
+                  <label style={S.label}>Your name</label>
+                  <input value={commitForm.name} onChange={function(e){ setCommitForm(function(f){ return Object.assign({}, f, { name:e.target.value }); }); }} style={S.input}/>
+                </div>
+                <div style={{ marginBottom:16 }}>
+                  <label style={S.label}>Email or mobile number</label>
+                  <input value={commitForm.contact} onChange={function(e){ setCommitForm(function(f){ return Object.assign({}, f, { contact:e.target.value }); }); }} placeholder="So we can reach you" style={S.input}/>
+                </div>
+                <button onClick={submitCommit} style={{ display:"block", width:"100%", background:"#e01a1a", color:"#fff", border:"none", padding:"12px 16px", fontWeight:700, fontSize:12, letterSpacing:"0.08em", textTransform:"uppercase", borderRadius:2, cursor:"pointer" }}>Commit to preorder</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -9571,7 +9819,7 @@ function ShopPage({ items, onReserve, onBack, embedded, defaultName, defaultCont
 }
 
 
-function PublicSite({ onLogin, onApply, onJoinCommunity, blocks, sessions, discountCodes, shopItems, onReserveItem, pizzaOrders, pizzaDeadline, pizzaDeliveryFee, onSubmitPizzaOrder, onMarkPizzaPaid, onClearUnpaidPizza }) {
+function PublicSite({ onLogin, onApply, onJoinCommunity, blocks, sessions, discountCodes, shopItems, onReserveItem, merchPreorders, merchPreorderCommitments, onCommitMerchPreorder, pizzaOrders, pizzaDeadline, pizzaDeliveryFee, onSubmitPizzaOrder, onMarkPizzaPaid, onClearUnpaidPizza }) {
   const [submitted, setSubmitted] = useState(false);
   const [applySubmitting, setApplySubmitting] = useState(false);
   const [applyError, setApplyError] = useState("");
@@ -9692,7 +9940,7 @@ function PublicSite({ onLogin, onApply, onJoinCommunity, blocks, sessions, disco
   }
 
   if (showShop) {
-    return <ShopPage items={shopItems||[]} onReserve={onReserveItem} onBack={function(){ setShowShop(false); }}/>;
+    return <ShopPage items={shopItems||[]} onReserve={onReserveItem} onBack={function(){ setShowShop(false); }} preorders={merchPreorders||[]} commitments={merchPreorderCommitments||[]} onCommit={onCommitMerchPreorder}/>;
   }
 
   if (showPizzaCodeEntry) {
@@ -9932,6 +10180,11 @@ export default function App() {
     await (coachId ? refreshData() : loadPublicData());
   }
 
+  async function commitToMerchPreorder(preorderId, name, contact, variantId, quantity) {
+    await api.commitToMerchPreorder(preorderId, name, contact, variantId, quantity);
+    await (coachId ? refreshData() : loadPublicData());
+  }
+
   async function submitPizzaOrder(order) {
     await api.submitPizzaOrder(order);
     await loadPublicData();
@@ -10020,5 +10273,5 @@ export default function App() {
     );
   }
 
-  return <PublicSite onLogin={function(){ setView("login"); }} onApply={addApplication} onJoinCommunity={addCommunityMember} blocks={data.blocks||BLOCKS} sessions={data.sessions} discountCodes={data.discountCodes||[]} shopItems={data.shopItems||[]} onReserveItem={reserveShopItem} pizzaOrders={data.pizzaOrders||[]} pizzaDeadline={data.pizzaDeadline} pizzaDeliveryFee={data.pizzaDeliveryFee||0} onSubmitPizzaOrder={submitPizzaOrder} onMarkPizzaPaid={markPizzaPaid} onClearUnpaidPizza={clearUnpaidPizzaOrders}/>;
+  return <PublicSite onLogin={function(){ setView("login"); }} onApply={addApplication} onJoinCommunity={addCommunityMember} blocks={data.blocks||BLOCKS} sessions={data.sessions} discountCodes={data.discountCodes||[]} shopItems={data.shopItems||[]} onReserveItem={reserveShopItem} merchPreorders={data.merchPreorders||[]} merchPreorderCommitments={data.merchPreorderCommitments||[]} onCommitMerchPreorder={commitToMerchPreorder} pizzaOrders={data.pizzaOrders||[]} pizzaDeadline={data.pizzaDeadline} pizzaDeliveryFee={data.pizzaDeliveryFee||0} onSubmitPizzaOrder={submitPizzaOrder} onMarkPizzaPaid={markPizzaPaid} onClearUnpaidPizza={clearUnpaidPizzaOrders}/>;
 }
