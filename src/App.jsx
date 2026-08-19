@@ -7136,7 +7136,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                             <input type="file" accept="image/*" onChange={function(e){
                               const file = e.target.files && e.target.files[0];
                               if (!file) return;
-                              compressImageFile(file, 900, 0.82).then(function(dataUrl){
+                              compressImageFile(file, 1600, 0.88).then(function(dataUrl){
                                 setMerchPreorderForm(function(f){ const variants=f.variants.map(function(x){ return x.id===v.id ? Object.assign({}, x, { photo:dataUrl }) : x; }); return Object.assign({}, f, { variants:variants }); });
                               }).catch(function(err){ window.alert("Couldn't process that photo: " + err.message); });
                             }} style={{ display:"none" }}/>
