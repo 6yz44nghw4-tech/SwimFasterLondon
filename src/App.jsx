@@ -7899,6 +7899,8 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
   });
 
   const isCommunityMember = member.memberStatus === "community";
+  const todayStr = new Date().toISOString().slice(0,10);
+  const shopHasNew = (allData.merchPreorders||[]).some(function(p){ return p.status==="open" && p.deadline>=todayStr; });
   const TABS = isCommunityMember
     ? [["profile","Profile"],["events","Events"],["shop","Shop"]]
     : [["profile","Profile"],["notifications","Notifications"],["resources","Resources"],["progress","Progress"],["events","Events"],["calendar","Blocks"],["records","Records"],["messages","Messages"],["cake","Cake Your Marks"],["shop","Shop"],["pizza","Pizza Night"]];
@@ -7916,7 +7918,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
               return (
                 <button key={t[0]} onClick={function(){ setTab(t[0]); if(t[0]==="messages"){ markMemberMessagesSeenNow(); } if(t[0]==="notifications"){ setLastSeenNotifCount(myNotifications.length); } }}
                   style={{ background:"none", border:"none", borderBottom:tab===t[0] ? "2px solid "+C.red : "2px solid transparent", color:tab===t[0] ? C.white : C.grey, padding:"10px 12px 8px", fontSize:11, fontWeight:tab===t[0]?700:400, letterSpacing:"0.06em", textTransform:"uppercase", cursor:"pointer", whiteSpace:"nowrap", flexShrink:0 }}>
-                  {t[1]}{t[0]==="messages" && unreadMsgCount > 0 && <span style={{ marginLeft:5, background:C.red, color:C.white, borderRadius:"50%", fontSize:9, fontWeight:900, padding:"1px 5px" }}>{unreadMsgCount}</span>}{t[0]==="notifications" && unreadNotifCount > 0 && <span style={{ marginLeft:5, background:C.red, color:C.white, borderRadius:"50%", fontSize:9, fontWeight:900, padding:"1px 5px" }}>{unreadNotifCount}</span>}
+                  {t[1]}{t[0]==="messages" && unreadMsgCount > 0 && <span style={{ marginLeft:5, background:C.red, color:C.white, borderRadius:"50%", fontSize:9, fontWeight:900, padding:"1px 5px" }}>{unreadMsgCount}</span>}{t[0]==="notifications" && unreadNotifCount > 0 && <span style={{ marginLeft:5, background:C.red, color:C.white, borderRadius:"50%", fontSize:9, fontWeight:900, padding:"1px 5px" }}>{unreadNotifCount}</span>}{t[0]==="shop" && shopHasNew && <span style={{ marginLeft:5, background:C.red, color:C.white, borderRadius:8, fontSize:8, fontWeight:800, letterSpacing:"0.04em", padding:"2px 5px" }}>NEW</span>}
                 </button>
               );
             })}
@@ -9906,6 +9908,8 @@ function PublicSite({ onLogin, onApply, onJoinCommunity, blocks, sessions, disco
   const [pizzaCodeInput, setPizzaCodeInput] = useState("");
   const [pizzaCodeError, setPizzaCodeError] = useState("");
   const PIZZA_ACCESS_CODE = "PIZZA2026";
+  const todayStr = new Date().toISOString().slice(0,10);
+  const shopHasNew = (merchPreorders||[]).some(function(p){ return p.status==="open" && p.deadline>=todayStr; });
 
   function openApply() { setShowApply(true); }
   function closeApply() { setShowApply(false); setSubmitted(false); }
@@ -10053,7 +10057,10 @@ function PublicSite({ onLogin, onApply, onJoinCommunity, blocks, sessions, disco
           </div>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:20 }}>
-          <button onClick={function(){ setShowShop(true); }} style={{ background:"none", border:"none", color:"#999", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", cursor:"pointer", fontSize:12, padding:0 }}>Shop</button>
+          <button onClick={function(){ setShowShop(true); }} style={{ position:"relative", background:"none", border:"none", color:"#999", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", cursor:"pointer", fontSize:12, padding:0 }}>
+            Shop
+            {shopHasNew && <span style={{ position:"absolute", top:-9, right:-20, background:"#e01a1a", color:"#fff", fontSize:8, fontWeight:800, letterSpacing:"0.04em", padding:"2px 5px", borderRadius:8, whiteSpace:"nowrap" }}>NEW</span>}
+          </button>
           <button onClick={onLogin} style={{ background:"transparent", border:"1px solid #333", color:"#bbb", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:2, padding:"8px 22px", fontSize:11, lineHeight:1.5, textAlign:"center" }}>Member<br/>Login</button>
         </div>
       </nav>
