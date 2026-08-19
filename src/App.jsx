@@ -4510,10 +4510,10 @@ function LoginPage({ onSuccess, onBack }) {
             Back to login
           </button>
         </div>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-start", minHeight:"calc(100vh - 53px)", padding:24, paddingTop:56 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-start", minHeight:"calc(100vh - 53px)", padding:24, paddingTop:20 }}>
           <div style={{ width:"100%", maxWidth:360, textAlign:"center" }}>
-            <div style={{ marginLeft:24 }}><Logo height={210}/></div>
-            <h1 style={{ fontWeight:900, fontSize:"1.6rem", textTransform:"uppercase", margin:"36px 0 4px" }}>Reset Password</h1>
+            <div style={{ marginLeft:24, marginBottom:48 }}><Logo height={210}/></div>
+            <h1 style={{ fontWeight:900, fontSize:"1.6rem", textTransform:"uppercase", margin:"0 0 4px" }}>Reset Password</h1>
             {forgotSent ? (
               <p style={{ color:C.grey, fontSize:13, lineHeight:1.7 }}>Check your inbox for a link to set a new password. It can take a few minutes to arrive.</p>
             ) : (
@@ -4544,10 +4544,10 @@ function LoginPage({ onSuccess, onBack }) {
           Back to site
         </button>
       </div>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"calc(100vh - 53px)", padding:24 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-start", minHeight:"calc(100vh - 53px)", padding:24, paddingTop:20 }}>
         <div style={{ width:"100%", maxWidth:360, textAlign:"center" }}>
-          <div style={{ marginLeft:24 }}><Logo height={210}/></div>
-          <h1 style={{ fontWeight:900, fontSize:"1.6rem", textTransform:"uppercase", margin:"36px 0 4px" }}>Login</h1>
+          <div style={{ marginLeft:24, marginBottom:48 }}><Logo height={210}/></div>
+          <h1 style={{ fontWeight:900, fontSize:"1.6rem", textTransform:"uppercase", margin:"0 0 4px" }}>Login</h1>
           <p style={{ color:C.grey, fontSize:13, marginBottom:24 }}>Members and coaches use the same login.</p>
           <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
             <div>
@@ -9704,9 +9704,9 @@ function PublicSite({ onLogin, onApply, onJoinCommunity, blocks, sessions, disco
 
   return (
     <div style={{ background:C.bg, color:C.white, fontFamily:"system-ui,sans-serif", fontSize:14 }}>
-      <nav style={{ position:"sticky", top:0, zIndex:100, background:"rgba(10,10,10,0.97)", borderBottom:"1px solid "+C.border, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 20px", overflow:"visible" }}>
-        <div style={{ position:"relative", height:50, display:"flex", alignItems:"center", overflow:"visible" }}>
-          <div style={{ position:"absolute", top:"50%", left:0, transform:"translateY(-50%)" }}>
+      <nav style={{ position:"sticky", top:0, zIndex:100, background:"rgba(10,10,10,0.97)", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 20px", overflow:"visible" }}>
+        <div style={{ position:"relative", height:50, overflow:"visible" }}>
+          <div style={{ position:"absolute", top:0, left:0 }}>
             <Logo height={82}/>
           </div>
         </div>
@@ -9715,6 +9715,7 @@ function PublicSite({ onLogin, onApply, onJoinCommunity, blocks, sessions, disco
           <button onClick={onLogin} style={{ background:"transparent", border:"1px solid #333", color:"#bbb", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:2, padding:"8px 22px", fontSize:11, lineHeight:1.5, textAlign:"center" }}>Member<br/>Login</button>
         </div>
       </nav>
+      <div style={{ position:"relative", zIndex:99, marginLeft:150, borderBottom:"1px solid "+C.border }}/>
 
       <section style={{ padding:"56px 20px 48px", borderBottom:"2px solid "+C.red }}>
         <span style={S.eyebrow}>Friday Night Sessions - London Fields</span>
