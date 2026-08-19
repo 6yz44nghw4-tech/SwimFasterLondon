@@ -8113,7 +8113,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
         )}
 
         {tab === "records" && (
-          <HallOfRecords records={allData.hallOfRecords || []} members={allData.members} blocks={allData.blocks || BLOCKS} isCoach={false} onUpdate={function(){}} currentMemberId={memberId}/>
+          <HallOfRecords records={allData.hallOfRecords || []} members={allData.memberDirectory || []} blocks={allData.blocks || BLOCKS} isCoach={false} onUpdate={function(){}} currentMemberId={memberId}/>
         )}
 
         {tab === "messages" && (

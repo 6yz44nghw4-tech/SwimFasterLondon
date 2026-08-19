@@ -299,7 +299,7 @@ export async function fetchAllData() {
     blockEnrolmentsRes, benchmarksRes, raceResultsRes, plannedEventsRes, prescribedDrillsRes,
     blockReportsRes, sessionFeedbackRes, generalCommentsRes, messagesRes, discountCodesRes,
     bakesRes, bakeRatingsRes, shopItemsRes, pizzaOrdersRes, clubSettingsRes, drillLibraryRes,
-    hallOfRecordsRes,
+    hallOfRecordsRes, memberDirectoryRes,
   ] = await Promise.all([
     supabase.from("members").select("*"),
     supabase.from("coaches").select("*"),
@@ -324,6 +324,7 @@ export async function fetchAllData() {
     supabase.from("club_settings").select("*").eq("id", 1).maybeSingle(),
     supabase.from("drill_library").select("*"),
     supabase.from("hall_of_records").select("*"),
+    supabase.rpc("get_member_directory"),
   ]);
 
   const firstError = [
@@ -331,7 +332,7 @@ export async function fetchAllData() {
     blockEnrolmentsRes, benchmarksRes, raceResultsRes, plannedEventsRes, prescribedDrillsRes,
     blockReportsRes, sessionFeedbackRes, generalCommentsRes, messagesRes, discountCodesRes,
     bakesRes, bakeRatingsRes, shopItemsRes, pizzaOrdersRes, clubSettingsRes, drillLibraryRes,
-    hallOfRecordsRes,
+    hallOfRecordsRes, memberDirectoryRes,
   ].find(function (r) { return r.error; });
   if (firstError) throw firstError.error;
 
@@ -362,6 +363,24 @@ export async function fetchAllData() {
     pizzaDeliveryFee: clubSettingsRes.data ? Number(clubSettingsRes.data.pizza_delivery_fee || 0) : 0,
     hallOfRecords: hallOfRecordsRes.data.map(mapHallOfRecord),
     drillLibrary: drillLibraryRes.data.map(mapDrill),
+    // Every member's name/gender/photo plus their benchmark times, for club-wide
+    // features (Hall of Records) that need to compare across members - unlike
+    // `members` above, this isn't restricted to your own row, since it's sourced
+    // from a security-definer RPC that deliberately excludes anything sensitive
+    // (medical notes, contact info, DOB, email) rather than opening up the members
+    // table itself for member-to-member visibility.
+    memberDirectory: (memberDirectoryRes.data || []).map(function (m) {
+      return {
+        id: m.id,
+        name: m.name,
+        nickname: m.nickname || "",
+        gender: m.gender || "",
+        photo: m.photo || null,
+        isTest: !!m.is_test,
+        isGuest: !!m.is_guest,
+        benchmarks: (related.benchmarks || []).filter(function (b) { return b.member_id === m.id; }).map(mapBenchmark),
+      };
+    }),
   };
 }
 
