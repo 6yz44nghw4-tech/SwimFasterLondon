@@ -368,12 +368,21 @@ class DashboardErrorBoundary extends Component {
 
 function Avatar({ name, size, photo }) {
   const h = size || 40;
+  const [expanded, setExpanded] = useState(false);
   const initials = name.split(" ").map(function(n){ return n[0]; }).join("").slice(0,2).toUpperCase();
   const color = C.red;
   if (photo) {
     return (
-      <div style={{ width:h, height:h, borderRadius:"50%", flexShrink:0, overflow:"hidden", border:"2px solid "+color+"44" }}>
-        <img src={photo} alt={name} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+      <div style={{ display:"contents" }}>
+        <div onClick={function(e){ e.stopPropagation(); setExpanded(true); }} style={{ width:h, height:h, borderRadius:"50%", flexShrink:0, overflow:"hidden", border:"2px solid "+color+"44", cursor:"pointer" }}>
+          <img src={photo} alt={name} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+        </div>
+        {expanded && (
+          <div onClick={function(e){ e.stopPropagation(); setExpanded(false); }} style={{ position:"fixed", inset:0, zIndex:500, background:"rgba(0,0,0,0.9)", display:"flex", alignItems:"center", justifyContent:"center", padding:24, cursor:"pointer" }}>
+            <img src={photo} alt={name} onClick={function(e){ e.stopPropagation(); }} style={{ maxWidth:"92vw", maxHeight:"85vh", borderRadius:6, boxShadow:"0 10px 40px rgba(0,0,0,0.6)", cursor:"default" }}/>
+            <button onClick={function(e){ e.stopPropagation(); setExpanded(false); }} style={{ position:"absolute", top:20, right:20, background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.3)", color:"#fff", fontSize:20, width:38, height:38, borderRadius:"50%", cursor:"pointer" }}>{"×"}</button>
+          </div>
+        )}
       </div>
     );
   }
