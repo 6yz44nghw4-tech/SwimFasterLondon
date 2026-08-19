@@ -10166,6 +10166,14 @@ export default function App() {
   const [coachId, setCoachId] = useState(null);
   const [data, setData] = useState(INIT);
   const [passwordGate, setPasswordGate] = useState(false);
+  // A recovery link's INITIAL_SESSION and PASSWORD_RECOVERY events can still resolve in
+  // either order (see the useEffect below), but resolveSession's own DB round-trip is the
+  // slow part - PASSWORD_RECOVERY reliably lands before that promise settles even when it
+  // fires after INITIAL_SESSION. Recording it in a ref (checked post-await, not at call time)
+  // lets resolveSession bail out of the dashboard routing instead of silently overwriting the
+  // reset-password screen once its lookup finishes (reported: happened right as the user
+  // tapped into the new-password field).
+  const passwordRecoveryRef = useRef(false);
 
   async function refreshData() {
     const fetched = await api.fetchAllData();
@@ -10184,6 +10192,7 @@ export default function App() {
 
   async function resolveSession(authUser) {
     const [profile, fetched] = await Promise.all([api.getProfileForAuthUser(authUser.id), api.fetchAllData()]);
+    if (passwordRecoveryRef.current) return;
     setData(fetched);
     if (profile && profile.role === "coach") {
       setCoachId(profile.coach.id);
@@ -10205,16 +10214,16 @@ export default function App() {
     // Driving the initial view off a single onAuthStateChange listener (rather than a
     // separate getSession() call racing alongside it) matters specifically for the password
     // recovery link: getSession() and the listener's first event both resolve the same
-    // initial session, but from two independent async chains with no guaranteed order. A
-    // recovery link landed here as two competing writes to `view` - resolveSession's dashboard
-    // routing sometimes finished a beat after PASSWORD_RECOVERY had already set the reset
-    // screen, silently bouncing the user back out of it (reported: happened right as they
-    // tapped into the new-password field, which is just whenever that race lost). One
-    // listener processing INITIAL_SESSION and PASSWORD_RECOVERY in the order Supabase
-    // actually emits them removes the race instead of guarding against it after the fact.
+    // initial session, but from two independent async chains with no guaranteed order.
+    // That fixed the original bounce, but resolveSession's own DB round-trip (see below)
+    // is itself slow enough to finish after PASSWORD_RECOVERY has already shown the reset
+    // screen, silently routing the user into their dashboard once it settles - reported as
+    // happening right as they tapped into the new-password field. passwordRecoveryRef is the
+    // guard against that: resolveSession checks it post-await, right before it would navigate.
     const { data: authListener } = supabase.auth.onAuthStateChange(function(event, session) {
       if (cancelled) return;
       if (event === "PASSWORD_RECOVERY") {
+        passwordRecoveryRef.current = true;
         setView("resetPassword");
         return;
       }
@@ -10233,6 +10242,7 @@ export default function App() {
   }, []);
 
   async function handleLoginSuccess() {
+    passwordRecoveryRef.current = false;
     const { data: sessionData } = await supabase.auth.getSession();
     if (sessionData.session && sessionData.session.user) {
       await resolveSession(sessionData.session.user);
