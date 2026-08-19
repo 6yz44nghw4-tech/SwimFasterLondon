@@ -4488,6 +4488,9 @@ function LoginPage({ onSuccess, onBack }) {
     });
   }
 
+  const inputStyle = { width:"100%", background:"#161616", border:"1px solid #333", color:"#fff", padding:"8px 10px", fontSize:13, borderRadius:2, outline:"none", boxSizing:"border-box", fontFamily:"inherit" };
+  const labelStyle = { fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#888", display:"block", marginBottom:4 };
+
   function openForgot() { setMode("forgot"); setForgotEmail(email); setForgotSent(false); setForgotError(""); }
   function handleForgotSubmit() {
     setForgotError("");
@@ -4510,22 +4513,22 @@ function LoginPage({ onSuccess, onBack }) {
             Back to login
           </button>
         </div>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-start", minHeight:"calc(100vh - 53px)", padding:24, paddingTop:20 }}>
-          <div style={{ width:"100%", maxWidth:360, textAlign:"center" }}>
-            <div style={{ marginLeft:24, marginBottom:48 }}><Logo height={210}/></div>
-            <h1 style={{ fontWeight:900, fontSize:"1.6rem", textTransform:"uppercase", margin:"0 0 4px" }}>Reset Password</h1>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-start", minHeight:"calc(100vh - 53px)", padding:24, paddingTop:8 }}>
+          <div style={{ width:"100%", maxWidth:300, textAlign:"center" }}>
+            <div style={{ marginLeft:24, marginBottom:44 }}><Logo height={210}/></div>
+            <h1 style={{ fontWeight:900, fontSize:"1.4rem", textTransform:"uppercase", margin:"0 0 4px" }}>Reset Password</h1>
             {forgotSent ? (
               <p style={{ color:C.grey, fontSize:13, lineHeight:1.7 }}>Check your inbox for a link to set a new password. It can take a few minutes to arrive.</p>
             ) : (
               <div>
-                <p style={{ color:C.grey, fontSize:13, marginBottom:24 }}>Enter your email and we'll send you a link to set a new password.</p>
-                <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+                <p style={{ color:C.grey, fontSize:12, marginBottom:20 }}>Enter your email and we'll send you a link to set a new password.</p>
+                <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
                   <div>
-                    <label style={S.label}>Email</label>
-                    <input type="email" autoComplete="email" value={forgotEmail} onChange={function(e){ setForgotEmail(e.target.value); }} placeholder="your@email.com" style={S.input} onKeyDown={function(e){ if (e.key==="Enter") handleForgotSubmit(); }}/>
+                    <label style={labelStyle}>Email</label>
+                    <input type="email" autoComplete="email" value={forgotEmail} onChange={function(e){ setForgotEmail(e.target.value); }} placeholder="your@email.com" style={inputStyle} onKeyDown={function(e){ if (e.key==="Enter") handleForgotSubmit(); }}/>
                   </div>
                   {forgotError && <div style={{ color:"#ff6b6b", fontSize:13 }}>{forgotError}</div>}
-                  <button onClick={handleForgotSubmit} disabled={forgotSending} style={{ background:"#e01a1a", color:"#fff", padding:"10px 20px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", borderRadius:2, cursor:"pointer", opacity:forgotSending ? 0.7 : 1 }}>
+                  <button onClick={handleForgotSubmit} disabled={forgotSending} style={{ background:"#e01a1a", color:"#fff", padding:"9px 18px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", borderRadius:2, cursor:"pointer", opacity:forgotSending ? 0.7 : 1 }}>
                     {forgotSending ? "Sending..." : "Send reset link"}
                   </button>
                 </div>
@@ -4544,22 +4547,22 @@ function LoginPage({ onSuccess, onBack }) {
           Back to site
         </button>
       </div>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-start", minHeight:"calc(100vh - 53px)", padding:24, paddingTop:20 }}>
-        <div style={{ width:"100%", maxWidth:360, textAlign:"center" }}>
-          <div style={{ marginLeft:24, marginBottom:48 }}><Logo height={210}/></div>
-          <h1 style={{ fontWeight:900, fontSize:"1.6rem", textTransform:"uppercase", margin:"0 0 4px" }}>Login</h1>
-          <p style={{ color:C.grey, fontSize:13, marginBottom:24 }}>Members and coaches use the same login.</p>
-          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-start", minHeight:"calc(100vh - 53px)", padding:24, paddingTop:8 }}>
+        <div style={{ width:"100%", maxWidth:300, textAlign:"center" }}>
+          <div style={{ marginLeft:24, marginBottom:44 }}><Logo height={210}/></div>
+          <h1 style={{ fontWeight:900, fontSize:"1.4rem", textTransform:"uppercase", margin:"0 0 4px" }}>Login</h1>
+          <p style={{ color:C.grey, fontSize:12, marginBottom:20 }}>Members and coaches use the same login.</p>
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             <div>
-              <label style={S.label}>Email</label>
-              <input type="email" autoComplete="email" value={email} onChange={function(e){ setEmail(e.target.value); }} placeholder="your@email.com" style={S.input} onKeyDown={handleKeyDown}/>
+              <label style={labelStyle}>Email</label>
+              <input type="email" autoComplete="email" value={email} onChange={function(e){ setEmail(e.target.value); }} placeholder="your@email.com" style={inputStyle} onKeyDown={handleKeyDown}/>
             </div>
             <div>
-              <label style={S.label}>Password</label>
-              <input type="password" autoComplete="current-password" value={password} onChange={function(e){ setPassword(e.target.value); }} placeholder="..." style={S.input} onKeyDown={handleKeyDown}/>
+              <label style={labelStyle}>Password</label>
+              <input type="password" autoComplete="current-password" value={password} onChange={function(e){ setPassword(e.target.value); }} placeholder="..." style={inputStyle} onKeyDown={handleKeyDown}/>
             </div>
             {error && <div style={{ color:"#ff6b6b", fontSize:13 }}>{error}</div>}
-            <button onClick={handle} disabled={loading} style={{ background:"#e01a1a", color:"#fff", padding:"10px 20px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", borderRadius:2, cursor:"pointer", opacity:loading ? 0.7 : 1 }}>
+            <button onClick={handle} disabled={loading} style={{ background:"#e01a1a", color:"#fff", padding:"9px 18px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", borderRadius:2, cursor:"pointer", opacity:loading ? 0.7 : 1 }}>
               {loading ? "Checking..." : "Sign In"}
             </button>
             <button onClick={openForgot} style={{ background:"none", border:"none", color:"#3b82f6", fontSize:12, cursor:"pointer", padding:0, marginTop:2 }}>
@@ -9706,7 +9709,7 @@ function PublicSite({ onLogin, onApply, onJoinCommunity, blocks, sessions, disco
     <div style={{ background:C.bg, color:C.white, fontFamily:"system-ui,sans-serif", fontSize:14 }}>
       <nav style={{ position:"sticky", top:0, zIndex:100, background:"rgba(10,10,10,0.97)", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 20px", overflow:"visible" }}>
         <div style={{ position:"relative", height:50, overflow:"visible" }}>
-          <div style={{ position:"absolute", top:0, left:0 }}>
+          <div style={{ position:"absolute", top:-12, left:0 }}>
             <Logo height={82}/>
           </div>
         </div>
