@@ -244,6 +244,40 @@ function firstNameOf(fullName) {
   return fullName.split(" ")[0];
 }
 
+// Photos get stored as a data URI directly in the DB (no separate storage
+// bucket), so an uncompressed phone photo - easily 3-4MB - goes straight into
+// a single insert/update payload. On a real mobile connection that's slow
+// enough to fail outright ("Load failed"), and even when it succeeds, every
+// page that renders the photo has to pull the whole multi-MB blob down just
+// to paint a small thumbnail. Downscaling to a sane max dimension and
+// re-encoding as JPEG before it ever reaches state cuts that by ~90%+ with no
+// visible quality loss at the sizes this app actually displays photos.
+function compressImageFile(file, maxDimension, quality) {
+  return new Promise(function(resolve, reject) {
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const img = new Image();
+      img.onload = function() {
+        let w = img.width, h = img.height;
+        const max = maxDimension || 900;
+        if (w > max || h > max) {
+          if (w >= h) { h = Math.round(h * max / w); w = max; }
+          else { w = Math.round(w * max / h); h = max; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality || 0.82));
+      };
+      img.onerror = function() { reject(new Error("Couldn't read that image.")); };
+      img.src = ev.target.result;
+    };
+    reader.onerror = function() { reject(new Error("Couldn't read that file.")); };
+    reader.readAsDataURL(file);
+  });
+}
+
 function displayNameFor(fullName, nickname) {
   const first = firstNameOf(fullName);
   if (nickname && nickname.trim()) return first + " (" + nickname.trim() + ")";
@@ -7102,9 +7136,9 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                             <input type="file" accept="image/*" onChange={function(e){
                               const file = e.target.files && e.target.files[0];
                               if (!file) return;
-                              const reader = new FileReader();
-                              reader.onload = function(ev){ setMerchPreorderForm(function(f){ const variants=f.variants.map(function(x){ return x.id===v.id ? Object.assign({}, x, { photo:ev.target.result }) : x; }); return Object.assign({}, f, { variants:variants }); }); };
-                              reader.readAsDataURL(file);
+                              compressImageFile(file, 900, 0.82).then(function(dataUrl){
+                                setMerchPreorderForm(function(f){ const variants=f.variants.map(function(x){ return x.id===v.id ? Object.assign({}, x, { photo:dataUrl }) : x; }); return Object.assign({}, f, { variants:variants }); });
+                              }).catch(function(err){ window.alert("Couldn't process that photo: " + err.message); });
                             }} style={{ display:"none" }}/>
                             <span style={{ background:"transparent", border:"1px solid #333", color:"#bbb", padding:"9px 12px", fontWeight:700, fontSize:11, letterSpacing:"0.06em", textTransform:"uppercase", borderRadius:2, display:"inline-block" }}>{v.photo?"Change":"Upload"}</span>
                           </label>
