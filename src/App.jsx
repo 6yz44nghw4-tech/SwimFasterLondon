@@ -427,6 +427,17 @@ function Avatar({ name, size, photo }) {
   );
 }
 
+// Same enlarge-on-click pattern as Avatar, factored out so any product/kit
+// photo (Shop, merch preorders) can reuse it without duplicating the overlay.
+function ImageLightbox({ src, alt, onClose }) {
+  return (
+    <div onClick={onClose} style={{ position:"fixed", inset:0, zIndex:500, background:"rgba(0,0,0,0.92)", display:"flex", alignItems:"center", justifyContent:"center", padding:24, cursor:"pointer" }}>
+      <img src={src} alt={alt||""} onClick={function(e){ e.stopPropagation(); }} style={{ maxWidth:"92vw", maxHeight:"85vh", borderRadius:6, boxShadow:"0 10px 40px rgba(0,0,0,0.6)", cursor:"default" }}/>
+      <button onClick={onClose} style={{ position:"absolute", top:20, right:20, background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.3)", color:"#fff", fontSize:20, width:38, height:38, borderRadius:"50%", cursor:"pointer" }}>{"×"}</button>
+    </div>
+  );
+}
+
 function BenchmarkChart({ benchmarks, event, color }) {
   const chartColor = color || C.red;
   const [tooltip, setTooltip] = useState(null);
@@ -9624,6 +9635,7 @@ function ShopPage({ items, onReserve, onBack, embedded, defaultName, defaultCont
   const [selectedPreorder, setSelectedPreorder] = useState(null);
   const [commitForm, setCommitForm] = useState({ name:defaultName||"", contact:defaultContact||"", variantId:"", quantity:1 });
   const [committed, setCommitted] = useState(false);
+  const [lightbox, setLightbox] = useState(null);
 
   const categories = ["All"].concat(Array.from(new Set(items.map(function(i){ return i.category; }))));
   const visibleItems = items
@@ -9667,30 +9679,39 @@ function ShopPage({ items, onReserve, onBack, embedded, defaultName, defaultCont
         <h2 style={{ fontWeight:900, fontSize:"1.8rem", textTransform:"uppercase", marginBottom:8 }}>Shop</h2>
 
         {openPreorders.length > 0 && (
-          <div style={{ marginBottom:32 }}>
+          <div style={{ marginBottom:36 }}>
             <span style={S.eyebrow}>New</span>
-            <h3 style={{ fontWeight:900, fontSize:"1.3rem", textTransform:"uppercase", marginBottom:10 }}>Merch Preorders</h3>
-            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            <h3 style={{ fontWeight:900, fontSize:"1.3rem", textTransform:"uppercase", marginBottom:12 }}>Merch Preorders</h3>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
               {openPreorders.map(function(p) {
                 const totalCommitted = (commitments||[]).filter(function(c){ return c.preorderId===p.id; }).reduce(function(sum,c){ return sum+c.quantity; }, 0);
+                const heroPhoto = (p.variants||[]).find(function(v){ return v.photo; });
                 return (
-                  <div key={p.id} style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, padding:16, display:"flex", gap:14, alignItems:"center", flexWrap:"wrap" }}>
-                    <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-                      {(p.variants||[]).map(function(v) {
-                        return (
-                          <div key={v.id} style={{ width:64, height:64, borderRadius:2, overflow:"hidden", background:"#161616" }}>
-                            {v.photo && <img src={v.photo} alt={v.label} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>}
-                          </div>
-                        );
-                      })}
+                  <div key={p.id} onClick={function(){ openPreorder(p); }} style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:4, overflow:"hidden", cursor:"pointer" }}>
+                    <div style={{ position:"relative", width:"100%", aspectRatio:"1", background:"#161616", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
+                      {heroPhoto ? (
+                        <img src={heroPhoto.photo} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+                      ) : (
+                        <span style={{ color:"#444", fontSize:11, textTransform:"uppercase", letterSpacing:"0.06em" }}>No photo</span>
+                      )}
+                      <div style={{ position:"absolute", top:8, left:8, background:"#e01a1a", color:"#fff", fontSize:9, fontWeight:800, padding:"4px 8px", borderRadius:2, textTransform:"uppercase", letterSpacing:"0.06em" }}>Preorder</div>
+                      {(p.variants||[]).length > 1 && (
+                        <div style={{ position:"absolute", bottom:8, left:8, display:"flex", gap:4 }}>
+                          {p.variants.map(function(v) {
+                            return (
+                              <div key={v.id} style={{ width:18, height:18, borderRadius:"50%", overflow:"hidden", border:"1.5px solid #fff", background:"#161616" }}>
+                                {v.photo && <img src={v.photo} alt={v.label} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                    <div style={{ flex:1, minWidth:180 }}>
-                      <div style={{ fontWeight:700, fontSize:15, color:"#fff", marginBottom:2 }}>{p.name}</div>
-                      {p.priceText && <div style={{ fontWeight:900, fontSize:15, color:"#f59e0b", marginBottom:2 }}>{p.priceText}</div>}
-                      {p.description && <div style={{ fontSize:12, color:C.grey, lineHeight:1.5, marginBottom:4 }}>{p.description}</div>}
-                      <div style={{ fontSize:11, color:C.greyDark }}>Preorder by {p.deadline} - {totalCommitted} committed so far</div>
+                    <div style={{ padding:"10px 12px" }}>
+                      <div style={{ fontWeight:700, fontSize:13, color:"#fff", marginBottom:4, lineHeight:1.3 }}>{p.name}</div>
+                      {p.priceText && <div style={{ fontWeight:900, fontSize:16, color:"#f59e0b", marginBottom:4 }}>{p.priceText}</div>}
+                      <div style={{ fontSize:10, color:C.greyDark }}>{totalCommitted} committed - by {p.deadline}</div>
                     </div>
-                    <button onClick={function(){ openPreorder(p); }} style={{ background:"#e01a1a", color:"#fff", border:"none", padding:"10px 18px", fontWeight:700, fontSize:12, letterSpacing:"0.08em", textTransform:"uppercase", borderRadius:2, cursor:"pointer", flexShrink:0 }}>Preorder</button>
                   </div>
                 );
               })}
@@ -9712,25 +9733,25 @@ function ShopPage({ items, onReserve, onBack, embedded, defaultName, defaultCont
           <div style={{ padding:"40px 0", textAlign:"center", color:"#666" }}>No items available in this category right now - check back soon.</div>
         )}
 
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
           {visibleItems.map(function(item) {
             const isReserved = item.status === "reserved";
             const isSold = item.status === "sold";
             return (
-              <div key={item.id} onClick={function(){ if (!isSold) openItem(item); }} style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, overflow:"hidden", cursor:isSold?"default":"pointer", opacity:isSold?0.5:1 }}>
-                <div style={{ width:"100%", aspectRatio:"1", background:"#161616", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
+              <div key={item.id} onClick={function(){ if (!isSold) openItem(item); }} style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:4, overflow:"hidden", cursor:isSold?"default":"pointer", opacity:isSold?0.5:1 }}>
+                <div style={{ position:"relative", width:"100%", aspectRatio:"1", background:"#161616", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
                   {item.photo ? (
                     <img src={item.photo} alt={item.name} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
                   ) : (
                     <span style={{ color:"#444", fontSize:11, textTransform:"uppercase", letterSpacing:"0.06em" }}>No photo</span>
                   )}
+                  <div style={{ position:"absolute", top:8, left:8, background:item.condition==="new"?C.green:C.amber, color:"#000", fontSize:9, fontWeight:800, padding:"4px 8px", borderRadius:2, textTransform:"uppercase", letterSpacing:"0.06em" }}>{item.condition==="new"?"New":"Used"}</div>
+                  {isReserved && <div style={{ position:"absolute", top:8, right:8, background:"#1a0a0a", border:"1px solid #7f1d1d", color:"#ff6b6b", fontSize:9, fontWeight:800, padding:"4px 8px", borderRadius:2, textTransform:"uppercase", letterSpacing:"0.06em" }}>Reserved</div>}
+                  {isSold && <div style={{ position:"absolute", top:8, right:8, background:"#111", border:"1px solid #333", color:"#888", fontSize:9, fontWeight:800, padding:"4px 8px", borderRadius:2, textTransform:"uppercase", letterSpacing:"0.06em" }}>Sold</div>}
                 </div>
                 <div style={{ padding:"10px 12px" }}>
-                  <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:item.condition==="new"?C.green:C.amber, marginBottom:4 }}>{item.condition==="new"?"New":"Used"}</div>
                   <div style={{ fontWeight:700, fontSize:13, color:"#fff", marginBottom:4, lineHeight:1.3 }}>{item.name}</div>
                   <div style={{ fontWeight:900, fontSize:16, color:"#f59e0b" }}>{"\u00A3"}{item.price}</div>
-                  {isReserved && <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:"#ff6b6b", marginTop:4 }}>Reserved</div>}
-                  {isSold && <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:"#666", marginTop:4 }}>Sold</div>}
                 </div>
               </div>
             );
@@ -9741,7 +9762,7 @@ function ShopPage({ items, onReserve, onBack, embedded, defaultName, defaultCont
       {selectedItem && (
         <div onClick={closeItem} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", zIndex:200, display:"flex", alignItems:"flex-start", justifyContent:"center", overflowY:"auto", padding:"20px 16px" }}>
           <div onClick={function(e){ e.stopPropagation(); }} style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, maxWidth:440, width:"100%", marginTop:20, marginBottom:20 }}>
-            <div style={{ width:"100%", aspectRatio:"1", background:"#161616", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
+            <div onClick={function(e){ if (selectedItem.photo) { e.stopPropagation(); setLightbox({ src:selectedItem.photo, alt:selectedItem.name }); } }} style={{ width:"100%", aspectRatio:"1", background:"#161616", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", cursor:selectedItem.photo?"zoom-in":"default" }}>
               {selectedItem.photo ? (
                 <img src={selectedItem.photo} alt={selectedItem.name} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
               ) : (
@@ -9782,7 +9803,21 @@ function ShopPage({ items, onReserve, onBack, embedded, defaultName, defaultCont
 
       {selectedPreorder && (
         <div onClick={closePreorder} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", zIndex:200, display:"flex", alignItems:"flex-start", justifyContent:"center", overflowY:"auto", padding:"20px 16px" }}>
-          <div onClick={function(e){ e.stopPropagation(); }} style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, maxWidth:440, width:"100%", marginTop:20, marginBottom:20, padding:"20px" }}>
+          <div onClick={function(e){ e.stopPropagation(); }} style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, maxWidth:440, width:"100%", marginTop:20, marginBottom:20 }}>
+            {(function() {
+              const heroVariant = (selectedPreorder.variants||[]).find(function(v){ return v.id===commitForm.variantId; }) || (selectedPreorder.variants||[])[0];
+              const heroPhoto = heroVariant && heroVariant.photo;
+              return (
+                <div onClick={function(e){ if (heroPhoto) { e.stopPropagation(); setLightbox({ src:heroPhoto, alt:selectedPreorder.name }); } }} style={{ width:"100%", aspectRatio:"1", background:"#161616", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", cursor:heroPhoto?"zoom-in":"default" }}>
+                  {heroPhoto ? (
+                    <img src={heroPhoto} alt={selectedPreorder.name} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+                  ) : (
+                    <span style={{ color:"#444", fontSize:12, textTransform:"uppercase", letterSpacing:"0.06em" }}>No photo</span>
+                  )}
+                </div>
+              );
+            })()}
+            <div style={{ padding:"20px" }}>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:6 }}>
               <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"#f59e0b" }}>Preorder</div>
               <button onClick={closePreorder} style={{ background:"none", border:"none", color:"#888", fontSize:20, cursor:"pointer", lineHeight:1, padding:0 }}>&times;</button>
@@ -9831,9 +9866,12 @@ function ShopPage({ items, onReserve, onBack, embedded, defaultName, defaultCont
                 <button onClick={submitCommit} style={{ display:"block", width:"100%", background:"#e01a1a", color:"#fff", border:"none", padding:"12px 16px", fontWeight:700, fontSize:12, letterSpacing:"0.08em", textTransform:"uppercase", borderRadius:2, cursor:"pointer" }}>Commit to preorder</button>
               </div>
             )}
+            </div>
           </div>
         </div>
       )}
+
+      {lightbox && <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={function(){ setLightbox(null); }}/>}
     </div>
   );
 
