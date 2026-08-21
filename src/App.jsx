@@ -4609,7 +4609,7 @@ function LoginPage({ onSuccess, onBack }) {
         </div>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-start", minHeight:"calc(100vh - 53px)", padding:24, paddingTop:8 }}>
           <div style={{ width:"100%", maxWidth:300, textAlign:"center" }}>
-            <div style={{ marginLeft:24, marginBottom:44 }}><Logo height={210}/></div>
+            <div style={{ display:"flex", justifyContent:"center", marginBottom:44 }}><Logo height={210}/></div>
             <h1 style={{ fontWeight:900, fontSize:"1.4rem", textTransform:"uppercase", margin:"0 0 4px" }}>Reset Password</h1>
             {forgotSent ? (
               <p style={{ color:C.grey, fontSize:13, lineHeight:1.7 }}>Check your inbox for a link to set a new password. It can take a few minutes to arrive.</p>
@@ -4643,7 +4643,7 @@ function LoginPage({ onSuccess, onBack }) {
       </div>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-start", minHeight:"calc(100vh - 53px)", padding:24, paddingTop:8 }}>
         <div style={{ width:"100%", maxWidth:300, textAlign:"center" }}>
-          <div style={{ marginLeft:24, marginBottom:44 }}><Logo height={210}/></div>
+          <div style={{ display:"flex", justifyContent:"center", marginBottom:44 }}><Logo height={210}/></div>
           <h1 style={{ fontWeight:900, fontSize:"1.4rem", textTransform:"uppercase", margin:"0 0 4px" }}>Login</h1>
           <p style={{ color:C.grey, fontSize:12, marginBottom:20 }}>Members and coaches use the same login.</p>
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
