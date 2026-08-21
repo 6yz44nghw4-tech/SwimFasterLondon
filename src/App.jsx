@@ -4669,11 +4669,28 @@ function LoginPage({ onSuccess, onBack }) {
   );
 }
 
-function ForcePasswordChange({ memberId, onDone }) {
+// Both password-set screens below reload the page (instead of just swapping the
+// in-app view) once the save succeeds. Safari/iOS only reliably offers to save a
+// changed password after a real page navigation following a password-field
+// submission - a client-side-only view swap never triggers that prompt, so the
+// new password was never getting captured by the keychain and looked like it
+// "didn't take" on the next login even though the account's password had in fact
+// changed (confirmed directly against the auth API). A hard reload after saving
+// is what a manual pull-to-refresh was accidentally doing to fix it by hand.
+// The hidden username field and real <form>/submit (rather than a bare
+// onClick button) are the other half of that same fix - Safari's save-password
+// heuristic wants an associated identifier and a genuine form submission to
+// key off, not just any button press.
+function ForcePasswordChange({ memberId }) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [email, setEmail] = useState("");
+
+  useEffect(function() {
+    supabase.auth.getUser().then(function(res) { setEmail((res.data.user && res.data.user.email) || ""); });
+  }, []);
 
   function handleSave() {
     setError("");
@@ -4683,8 +4700,7 @@ function ForcePasswordChange({ memberId, onDone }) {
     api.changeMyPassword(password).then(function() {
       return api.updateMemberFields(memberId, { mustChangePassword: false });
     }).then(function() {
-      setSaving(false);
-      onDone();
+      window.location.reload();
     }).catch(function(err) {
       setSaving(false);
       setError(err.message || "Couldn't update your password. Please try again.");
@@ -4697,7 +4713,8 @@ function ForcePasswordChange({ memberId, onDone }) {
         <Logo height={44}/>
         <h1 style={{ fontWeight:900, fontSize:"1.4rem", textTransform:"uppercase", margin:"28px 0 4px" }}>Set a new password</h1>
         <p style={{ color:C.grey, fontSize:13, marginBottom:24 }}>You're signed in with a temporary password. Choose a new one to continue.</p>
-        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+        <form onSubmit={function(e){ e.preventDefault(); handleSave(); }} style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          <input type="email" autoComplete="username" value={email} readOnly style={{ position:"absolute", width:1, height:1, opacity:0, pointerEvents:"none" }}/>
           <div>
             <label style={S.label}>New password</label>
             <input type="password" autoComplete="new-password" value={password} onChange={function(e){ setPassword(e.target.value); }} style={S.input}/>
@@ -4707,20 +4724,25 @@ function ForcePasswordChange({ memberId, onDone }) {
             <input type="password" autoComplete="new-password" value={confirm} onChange={function(e){ setConfirm(e.target.value); }} style={S.input}/>
           </div>
           {error && <div style={{ color:"#ff6b6b", fontSize:13 }}>{error}</div>}
-          <button onClick={handleSave} disabled={saving} style={{ background:"#e01a1a", color:"#fff", padding:"10px 20px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", borderRadius:2, cursor:"pointer", opacity:saving?0.7:1 }}>
+          <button type="submit" disabled={saving} style={{ background:"#e01a1a", color:"#fff", padding:"10px 20px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", borderRadius:2, cursor:"pointer", opacity:saving?0.7:1 }}>
             {saving ? "Saving..." : "Save & continue"}
           </button>
-        </div>
+        </form>
       </div>
     </div>
   );
 }
 
-function ResetPassword({ onDone }) {
+function ResetPassword() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [email, setEmail] = useState("");
+
+  useEffect(function() {
+    supabase.auth.getUser().then(function(res) { setEmail((res.data.user && res.data.user.email) || ""); });
+  }, []);
 
   function handleSave() {
     setError("");
@@ -4728,8 +4750,7 @@ function ResetPassword({ onDone }) {
     if (password !== confirm) { setError("Passwords don't match."); return; }
     setSaving(true);
     api.changeMyPassword(password).then(function() {
-      setSaving(false);
-      onDone();
+      window.location.reload();
     }).catch(function(err) {
       setSaving(false);
       setError(err.message || "Couldn't update your password. Please try again.");
@@ -4742,7 +4763,8 @@ function ResetPassword({ onDone }) {
         <Logo height={44}/>
         <h1 style={{ fontWeight:900, fontSize:"1.4rem", textTransform:"uppercase", margin:"28px 0 4px" }}>Reset your password</h1>
         <p style={{ color:C.grey, fontSize:13, marginBottom:24 }}>Choose a new password for your account. No need to remember the old one.</p>
-        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+        <form onSubmit={function(e){ e.preventDefault(); handleSave(); }} style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          <input type="email" autoComplete="username" value={email} readOnly style={{ position:"absolute", width:1, height:1, opacity:0, pointerEvents:"none" }}/>
           <div>
             <label style={S.label}>New password</label>
             <input type="password" autoComplete="new-password" value={password} onChange={function(e){ setPassword(e.target.value); }} style={S.input}/>
@@ -4752,10 +4774,10 @@ function ResetPassword({ onDone }) {
             <input type="password" autoComplete="new-password" value={confirm} onChange={function(e){ setConfirm(e.target.value); }} style={S.input}/>
           </div>
           {error && <div style={{ color:"#ff6b6b", fontSize:13 }}>{error}</div>}
-          <button onClick={handleSave} disabled={saving} style={{ background:"#e01a1a", color:"#fff", padding:"10px 20px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", borderRadius:2, cursor:"pointer", opacity:saving?0.7:1 }}>
+          <button type="submit" disabled={saving} style={{ background:"#e01a1a", color:"#fff", padding:"10px 20px", fontWeight:700, fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", borderRadius:2, cursor:"pointer", opacity:saving?0.7:1 }}>
             {saving ? "Saving..." : "Save & continue"}
           </button>
-        </div>
+        </form>
       </div>
     </div>
   );
@@ -10364,7 +10386,7 @@ export default function App() {
   }
 
   if (view === "resetPassword") {
-    return <ResetPassword onDone={handleLoginSuccess}/>;
+    return <ResetPassword/>;
   }
 
   if (view === "coach") {
@@ -10377,7 +10399,7 @@ export default function App() {
 
   if (view === "member") {
     if (passwordGate) {
-      return <ForcePasswordChange memberId={memberId} onDone={function(){ setPasswordGate(false); }}/>;
+      return <ForcePasswordChange memberId={memberId}/>;
     }
     return (
       <DashboardErrorBoundary>
