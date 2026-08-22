@@ -320,7 +320,19 @@ function normalizeSwimTime(raw) {
   const s = String(raw||"").trim();
   if (!s || s.indexOf(":") !== -1) return s;
   const n = parseFloat(s);
-  if (isNaN(n) || n < 60) return s;
+  if (isNaN(n)) return s;
+  // The other typo this shorthand invites: a colon meant as "minutes:seconds"
+  // typed as a period instead (Katie's "1.09" for a 100m Free target, meaning
+  // 1:09) - nothing this club tracks finishes in under ~15 seconds, so a
+  // value that small with a clean two-digit decimal (reads exactly like
+  // "M.SS") is unmistakably that typo rather than a literal time. Only the
+  // two-digit form qualifies, so a genuine short time like "58.40" (fifty-
+  // eight seconds, one decimal or two but not sub-15) is never touched.
+  if (n < 15 && /^\d{1,2}\.\d{2}$/.test(s)) {
+    const parts = s.split(".");
+    return parts[0] + ":" + parts[1];
+  }
+  if (n < 60) return s;
   const decimals = (s.split(".")[1]||"").length;
   const mins = Math.floor(n / 60);
   const remSec = n - mins * 60;
@@ -1550,7 +1562,7 @@ function SpeedCoach({ member, targetTime, onSetTarget }) {
 
   function saveTarget() {
     if (!inputTarget.trim()) return;
-    onSetTarget(inputTarget.trim());
+    onSetTarget(normalizeSwimTime(inputTarget.trim()));
     setEditingTarget(false);
   }
 
@@ -7464,7 +7476,6 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
     checkNavScroll(navBarRef.current);
   }, []);
   const [progressSub, setProgressSub] = useState("charts");
-  const [progressTargetInput, setProgressTargetInput] = useState("");
 
   function persistField(field, value) {
     if (!refreshData) return;
@@ -8125,7 +8136,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
                       </div>
                       <div style={{ display:"flex", gap:8, marginTop:8 }}>
                         <button onClick={function(){ setProgressSub("target"); }} style={S.btnRed}>Get faster</button>
-                        <button onClick={function(){ setTargetTime(null); setProgressTargetInput(""); }} style={S.btnGhost}>Change target</button>
+                        <button onClick={function(){ setProgressSub("target"); }} style={S.btnGhost}>Change target</button>
                       </div>
                     </div>
                   );
