@@ -378,11 +378,31 @@ export async function fetchAllData() {
     generalComments: generalCommentsRes.data,
   };
 
+  const mappedSessions = sessionsRes.data.map(mapSession);
+  // Every swimmer-picking list in the coach dashboard (register, record-a-time,
+  // session packs, reporting, profiles) reads straight off this array with no
+  // sort of its own, so ordering it here once - most sessions attended first -
+  // becomes the site-wide default everywhere a member list is shown, rather
+  // than needing the same sort bolted onto every dropdown individually. A
+  // member's own fetch only ever contains their single row (RLS-restricted),
+  // so this is a no-op for anyone but a coach.
+  const attendanceCounts = {};
+  mappedSessions.forEach(function (s) {
+    Object.keys(s.attendance || {}).forEach(function (memberId) {
+      if (s.attendance[memberId]) attendanceCounts[memberId] = (attendanceCounts[memberId] || 0) + 1;
+    });
+  });
+  const mappedMembers = membersRes.data.map(function (m) { return mapMember(m, related); }).sort(function (a, b) {
+    const diff = (attendanceCounts[b.id] || 0) - (attendanceCounts[a.id] || 0);
+    if (diff !== 0) return diff;
+    return (a.name || "").localeCompare(b.name || "");
+  });
+
   return {
-    members: membersRes.data.map(function (m) { return mapMember(m, related); }),
+    members: mappedMembers,
     coaches: coachesRes.data.map(mapCoach),
     applications: applicationsRes.data.map(mapApplication),
-    sessions: sessionsRes.data.map(mapSession),
+    sessions: mappedSessions,
     blocks: blocksRes.data.map(mapBlock),
     sessionPacks: sessionPacksRes.data.map(mapSessionPack),
     messages: messagesRes.data.map(mapMessage),

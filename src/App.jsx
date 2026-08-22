@@ -4463,12 +4463,10 @@ function AttendanceModal({ session, members, sessionPacks, onClose, onToggle, on
     setAddingGuest(false);
   }
 
-  const eligible = members
-    .filter(function(m){ return m.block === session.block; })
-    .sort(function(a,b){ return a.name.localeCompare(b.name); });
-
-  const allSorted = members.slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
-  const list = showAll ? allSorted : eligible;
+  // `members` is already ordered most-attended-first by fetchAllData(); preserved as-is
+  // here (not re-sorted alphabetically) so the register matches that default everywhere.
+  const eligible = members.filter(function(m){ return m.block === session.block; });
+  const list = showAll ? members : eligible;
   const attended = Object.values(session.attendance || {}).filter(Boolean).length;
 
   function activePackFor(memberId) {
