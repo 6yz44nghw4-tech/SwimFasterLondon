@@ -4605,7 +4605,7 @@ function LoginPage({ onSuccess, onBack }) {
             Back to login
           </button>
         </div>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-start", minHeight:"calc(100vh - 53px)", padding:24, paddingTop:8 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"calc(100vh - 53px)", padding:24, paddingTop:8 }}>
           <div style={{ width:"100%", maxWidth:300, textAlign:"center" }}>
             <div style={{ display:"flex", justifyContent:"center", marginBottom:44 }}><Logo height={210}/></div>
             <h1 style={{ fontWeight:900, fontSize:"1.4rem", textTransform:"uppercase", margin:"0 0 4px" }}>Reset Password</h1>
@@ -4639,7 +4639,7 @@ function LoginPage({ onSuccess, onBack }) {
           Back to site
         </button>
       </div>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-start", minHeight:"calc(100vh - 53px)", padding:24, paddingTop:8 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"calc(100vh - 53px)", padding:24, paddingTop:8 }}>
         <div style={{ width:"100%", maxWidth:300, textAlign:"center" }}>
           <div style={{ display:"flex", justifyContent:"center", marginBottom:44 }}><Logo height={210}/></div>
           <h1 style={{ fontWeight:900, fontSize:"1.4rem", textTransform:"uppercase", margin:"0 0 4px" }}>Login</h1>
@@ -10101,18 +10101,16 @@ function PublicSite({ onLogin, onApply, onJoinCommunity, blocks, sessions, disco
   return (
     <div style={{ background:C.bg, color:C.white, fontFamily:"system-ui,sans-serif", fontSize:14 }}>
       <nav style={{ position:"sticky", top:0, zIndex:100, background:"rgba(10,10,10,0.97)", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 20px", overflow:"visible" }}>
-        <div style={{ position:"relative", height:50, overflow:"visible" }}>
+        <div style={{ position:"relative", width:108, height:50, overflow:"visible", flexShrink:0 }}>
           <div style={{ position:"absolute", top:-12, left:0 }}>
             <Logo height={82}/>
           </div>
         </div>
-        <div style={{ display:"flex", alignItems:"center", gap:20 }}>
-          <button onClick={function(){ setShowShop(true); }} style={{ position:"relative", background:"none", border:"none", color:"#999", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", cursor:"pointer", fontSize:12, padding:0 }}>
-            Shop
-            {shopHasNew && <span style={{ position:"absolute", top:-9, right:-20, background:"#e01a1a", color:"#fff", fontSize:8, fontWeight:800, letterSpacing:"0.04em", padding:"2px 5px", borderRadius:8, whiteSpace:"nowrap" }}>NEW</span>}
-          </button>
-          <button onClick={onLogin} style={{ background:"transparent", border:"1px solid #333", color:"#bbb", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:2, padding:"8px 22px", fontSize:11, lineHeight:1.5, textAlign:"center" }}>Member<br/>Login</button>
-        </div>
+        <button onClick={function(){ setShowShop(true); }} style={{ position:"relative", background:"none", border:"none", color:"#999", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", cursor:"pointer", fontSize:12, padding:0 }}>
+          Shop
+          {shopHasNew && <span style={{ position:"absolute", top:-9, right:-20, background:"#e01a1a", color:"#fff", fontSize:8, fontWeight:800, letterSpacing:"0.04em", padding:"2px 5px", borderRadius:8, whiteSpace:"nowrap" }}>NEW</span>}
+        </button>
+        <button onClick={onLogin} style={{ background:"transparent", border:"1px solid #333", color:"#bbb", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", borderRadius:2, padding:"8px 22px", fontSize:11, lineHeight:1.5, textAlign:"center" }}>Member<br/>Login</button>
       </nav>
       <div style={{ position:"relative", zIndex:99, marginLeft:150, borderBottom:"1px solid "+C.border }}/>
 
