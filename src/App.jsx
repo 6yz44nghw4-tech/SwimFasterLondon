@@ -3330,8 +3330,9 @@ function countdownParts(dateStr) {
   return { totalDays: totalDays, weeks: weeks, days: days, hours: hours };
 }
 
-function MyEventsPage({ member, plannedEvents, onSave, allMembers, raceLogContent }) {
+function MyEventsPage({ member, plannedEvents, onSave, allMembers }) {
   const [openEventId, setOpenEventId] = useState(null);
+  const [openSquadEventId, setOpenSquadEventId] = useState(null);
 
   const TODAY_MY = new Date();
 
@@ -3345,6 +3346,23 @@ function MyEventsPage({ member, plannedEvents, onSave, allMembers, raceLogConten
     });
     return list;
   }
+
+  // One row per distinct event anyone in the squad has committed to (not just
+  // this member's own list) - lets a swimmer discover races others are doing
+  // without needing to already know to look for them in Race Search.
+  const squadEvents = (function() {
+    const map = {};
+    (allMembers||[]).forEach(function(m) {
+      (m.plannedEvents||[]).forEach(function(pe) {
+        if (!map[pe.eventId]) map[pe.eventId] = { eventId:pe.eventId, eventName:pe.eventName, eventDate:pe.eventDate, count:0 };
+        map[pe.eventId].count++;
+      });
+    });
+    return Object.values(map)
+      .filter(function(e){ return new Date(e.eventDate) >= TODAY_MY; })
+      .sort(function(a,b){ return a.eventDate.localeCompare(b.eventDate); });
+  })();
+  function toggleSquadOpen(id) { setOpenSquadEventId(openSquadEventId === id ? null : id); }
 
   const myUpcoming = (plannedEvents||[])
     .filter(function(pe) { return new Date(pe.eventDate) >= TODAY_MY; })
@@ -3443,7 +3461,47 @@ function MyEventsPage({ member, plannedEvents, onSave, allMembers, raceLogConten
       </div>
 
       <div style={{ borderTop:"1px solid "+C.border, marginTop:32, paddingTop:32 }}>
-        {raceLogContent}
+        <span style={S.eyebrow}>Squad</span>
+        <h3 style={{ fontWeight:900, fontSize:"1.3rem", textTransform:"uppercase", marginBottom:4 }}>Squad Sign-Ups</h3>
+        <p style={{ color:C.grey, fontSize:13, marginBottom:20 }}>Events other swimmers have committed to - tap one to see who's in.</p>
+        {squadEvents.length === 0 ? (
+          <div style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, padding:"20px", textAlign:"center", color:C.greyDark, fontSize:13 }}>No squad sign-ups yet.</div>
+        ) : (
+          <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+            {squadEvents.map(function(ev) {
+              const isOpen = openSquadEventId === ev.eventId;
+              const commits = commitmentsFor(ev.eventId);
+              return (
+                <div key={ev.eventId} style={{ background:isOpen?C.panel:C.bg, border:"1px solid "+(isOpen?C.red+"66":C.border), borderRadius:2, overflow:"hidden" }}>
+                  <div onClick={function(){ toggleSquadOpen(ev.eventId); }} style={{ padding:"14px 16px", cursor:"pointer", display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10 }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:11, color:C.greyDark, marginBottom:4 }}>{ev.eventDate}</div>
+                      <div style={{ fontWeight:700, fontSize:14, color:C.white }}>{ev.eventName}</div>
+                    </div>
+                    <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6, flexShrink:0 }}>
+                      <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:"#3b82f6" }}>{ev.count} committed</div>
+                      <div style={{ fontSize:13, color:C.grey }}>{isOpen?"-":"+"}</div>
+                    </div>
+                  </div>
+                  {isOpen && (
+                    <div style={{ borderTop:"1px solid "+C.border, padding:"12px 16px 16px" }}>
+                      <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                        {commits.map(function(c, i) {
+                          return (
+                            <div key={i}>
+                              <span style={{ fontWeight:700, fontSize:13, color:c.isMe?C.amber:C.white }}>{c.name}{c.isMe?" (you)":""}</span>
+                              {c.note && <span style={{ fontSize:12, color:"#93c5fd", fontStyle:"italic" }}> - {c.note}</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div style={{ borderTop:"1px solid "+C.border, marginTop:32, paddingTop:32 }}>
@@ -7963,8 +8021,8 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
   const todayStr = new Date().toISOString().slice(0,10);
   const shopHasNew = (allData.merchPreorders||[]).some(function(p){ return p.status==="open" && p.deadline>=todayStr; });
   const TABS = isCommunityMember
-    ? [["profile","Profile"],["events","Events"],["shop","Shop"]]
-    : [["profile","Profile"],["notifications","Notifications"],["resources","Resources"],["progress","Progress"],["events","Events"],["calendar","Blocks"],["records","Records"],["messages","Messages"],["cake","Cake Your Marks"],["shop","Shop"],["pizza","Pizza Night"]];
+    ? [["profile","Profile"],["events","Events"],["racelog","Race Log"],["shop","Shop"]]
+    : [["profile","Profile"],["notifications","Notifications"],["resources","Resources"],["progress","Progress"],["events","Events"],["racelog","Race Log"],["calendar","Blocks"],["records","Records"],["messages","Messages"],["cake","Cake Your Marks"],["shop","Shop"],["pizza","Pizza Night"]];
 
   return (
     <div style={{ background:C.bg, minHeight:"100vh", fontFamily:"system-ui,sans-serif", color:C.white }}>
@@ -8224,9 +8282,12 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
             member={member}
             plannedEvents={plannedEvents}
             onSave={function(next){ setPlannedEvents(next); }}
-            allMembers={allData.members}
-            raceLogContent={<RaceReportPage member={member} raceResults={raceResults} onSave={function(next){ setRaceResults(next); }}/>}
+            allMembers={allData.memberDirectory}
           />
+        )}
+
+        {tab === "racelog" && (
+          <RaceReportPage member={member} raceResults={raceResults} onSave={function(next){ setRaceResults(next); }}/>
         )}
 
         {tab === "calendar" && (

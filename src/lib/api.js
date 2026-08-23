@@ -414,12 +414,13 @@ export async function fetchAllData() {
     pizzaDeliveryFee: clubSettingsRes.data ? Number(clubSettingsRes.data.pizza_delivery_fee || 0) : 0,
     hallOfRecords: hallOfRecordsRes.data.map(mapHallOfRecord),
     drillLibrary: drillLibraryRes.data.map(mapDrill),
-    // Every member's name/gender/photo plus their benchmark times, for club-wide
-    // features (Hall of Records) that need to compare across members - unlike
-    // `members` above, this isn't restricted to your own row, since it's sourced
-    // from a security-definer RPC that deliberately excludes anything sensitive
-    // (medical notes, contact info, DOB, email) rather than opening up the members
-    // table itself for member-to-member visibility.
+    // Every member's name/gender/photo plus their benchmark times and race
+    // sign-ups, for club-wide features (Hall of Records, "who else is going"/
+    // Squad Sign-Ups) that need to compare across members - unlike `members`
+    // above, this isn't restricted to your own row, since it's sourced from a
+    // security-definer RPC that deliberately excludes anything sensitive
+    // (medical notes, contact info, DOB, email) rather than opening up the
+    // members table itself for member-to-member visibility.
     memberDirectory: (memberDirectoryRes.data || []).map(function (m) {
       return {
         id: m.id,
@@ -430,6 +431,7 @@ export async function fetchAllData() {
         isTest: !!m.is_test,
         isGuest: !!m.is_guest,
         benchmarks: (related.benchmarks || []).filter(function (b) { return b.member_id === m.id; }).map(mapBenchmark),
+        plannedEvents: (related.plannedEvents || []).filter(function (e) { return e.member_id === m.id; }).map(mapPlannedEvent),
       };
     }),
     merchPreorders: merchPreordersRes.data.map(mapMerchPreorder),
