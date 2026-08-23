@@ -450,6 +450,24 @@ function ImageLightbox({ src, alt, onClose }) {
   );
 }
 
+// Answers "which Katie is that?" when a squad-wide list only has room for a
+// first name/nickname - a lightweight identity card (photo + full name),
+// not a full profile, since this renders for other members too and the
+// member-safe directory data it's built from deliberately excludes
+// anything beyond name/nickname/photo.
+function MemberIdentityCard({ name, nickname, photo, onClose }) {
+  return (
+    <div onClick={onClose} style={{ position:"fixed", inset:0, zIndex:500, background:"rgba(0,0,0,0.85)", display:"flex", alignItems:"center", justifyContent:"center", padding:24, cursor:"pointer" }}>
+      <div onClick={function(e){ e.stopPropagation(); }} style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:4, padding:"28px 24px", display:"flex", flexDirection:"column", alignItems:"center", gap:12, cursor:"default", maxWidth:280 }}>
+        <Avatar name={name} size={84} photo={photo}/>
+        <div style={{ fontWeight:900, fontSize:18, color:"#fff", textAlign:"center" }}>{name}</div>
+        {nickname && <div style={{ fontSize:13, color:C.grey, textAlign:"center" }}>"{nickname}"</div>}
+      </div>
+      <button onClick={onClose} style={{ position:"absolute", top:20, right:20, background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.3)", color:"#fff", fontSize:20, width:38, height:38, borderRadius:"50%", cursor:"pointer" }}>{"×"}</button>
+    </div>
+  );
+}
+
 function BenchmarkChart({ benchmarks, event, color }) {
   const chartColor = color || C.red;
   const [tooltip, setTooltip] = useState(null);
@@ -2062,6 +2080,21 @@ function raceMonthLabel(dateStr) {
   return months[d.getUTCMonth()].toUpperCase()+" "+d.getUTCFullYear();
 }
 
+// A plain "2026-09-05" line reads as low-priority metadata (small, grey) even
+// though the date is usually the first thing a swimmer actually needs from
+// an event row - this renders it as a ticket-style tile (month + day) so it
+// carries as much visual weight as the event name next to it.
+function DateTile({ dateStr }) {
+  const d = new Date(dateStr+"T00:00:00");
+  const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  return (
+    <div style={{ background:C.bg, border:"1px solid "+C.border, borderRadius:3, padding:"6px 10px", textAlign:"center", flexShrink:0, minWidth:52 }}>
+      <div style={{ fontSize:10, fontWeight:800, letterSpacing:"0.06em", color:C.red }}>{months[d.getMonth()]}</div>
+      <div style={{ fontSize:20, fontWeight:900, color:"#fff", lineHeight:1.1, fontFamily:"monospace" }}>{d.getDate()}</div>
+    </div>
+  );
+}
+
 function loyaltyDiscountForCount(consecutiveBlocks) {
   if (consecutiveBlocks >= 4) return 15;
   if (consecutiveBlocks >= 2) return 10;
@@ -3330,9 +3363,53 @@ function countdownParts(dateStr) {
   return { totalDays: totalDays, weeks: weeks, days: days, hours: hours };
 }
 
+// "What is X-WATERS Slovenia?" - a swimmer committed (by themselves or via a
+// squadmate) to an event they don't recognise has no way to find out what it
+// actually involves from My Events/Squad Sign-Ups today. Looks the event up
+// in RACE_EVENTS by id and renders the same distances/organiser/deadline/
+// official-link block Race Search already shows, so both places describe an
+// event identically instead of duplicating the copy.
+function EventDetailBlock({ eventId }) {
+  const ev = RACE_EVENTS.find(function(e){ return e.id === eventId; });
+  if (!ev) return null;
+  const tc = RACE_TYPE_COLORS[ev.type] || RACE_TYPE_COLORS["Other"];
+  return (
+    <div style={{ marginBottom:14 }}>
+      <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:10 }}>
+        <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:tc, border:"1px solid "+tc+"44", padding:"2px 7px", borderRadius:1 }}>{ev.type}</div>
+        {(ev.alsoTypes||[]).map(function(t) {
+          const atc = RACE_TYPE_COLORS[t] || RACE_TYPE_COLORS["Other"];
+          return <div key={t} style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:atc, border:"1px solid "+atc+"44", padding:"2px 7px", borderRadius:1 }}>{t}</div>;
+        })}
+      </div>
+      <div style={{ fontSize:13, color:C.grey, marginBottom:8 }}>{ev.location}</div>
+      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+        {ev.distances && (
+          <div>
+            <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:C.greyDark, marginBottom:3 }}>Distances</div>
+            <div style={{ fontSize:13, color:C.greyLight }}>{ev.distances}</div>
+          </div>
+        )}
+        <div>
+          <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:C.greyDark, marginBottom:3 }}>Organiser</div>
+          <div style={{ fontSize:13, color:C.greyLight }}>{ev.org}</div>
+        </div>
+        {ev.deadline && (
+          <div>
+            <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:C.greyDark, marginBottom:3 }}>Entry deadline</div>
+            <div style={{ fontSize:13, color:C.amber }}>{ev.deadline}</div>
+          </div>
+        )}
+      </div>
+      {ev.link && <a href={ev.link} target="_blank" rel="noreferrer" style={{ display:"inline-block", marginTop:10, background:"transparent", border:"1px solid "+tc, color:tc, fontWeight:700, fontSize:11, letterSpacing:"0.08em", textTransform:"uppercase", padding:"9px 16px", borderRadius:1, textDecoration:"none" }}>Official entry</a>}
+    </div>
+  );
+}
+
 function MyEventsPage({ member, plannedEvents, onSave, allMembers }) {
   const [openEventId, setOpenEventId] = useState(null);
   const [openSquadEventId, setOpenSquadEventId] = useState(null);
+  const [identityPopup, setIdentityPopup] = useState(null);
 
   const TODAY_MY = new Date();
 
@@ -3341,7 +3418,7 @@ function MyEventsPage({ member, plannedEvents, onSave, allMembers }) {
     const list = [];
     allMembers.forEach(function(m) {
       (m.plannedEvents||[]).forEach(function(pe) {
-        if (pe.eventId === eventId) list.push({ name:displayName(m), note:pe.note, isMe: member && m.id===member.id });
+        if (pe.eventId === eventId) list.push({ id:m.id, name:displayName(m), fullName:m.name, nickname:m.nickname, photo:m.photo, note:pe.note, isMe: member && m.id===member.id });
       });
     });
     return list;
@@ -3385,7 +3462,7 @@ function MyEventsPage({ member, plannedEvents, onSave, allMembers }) {
           <div style={{ background:"linear-gradient(135deg, #1a0505, #0d0d0d)", border:"1px solid "+C.red, borderRadius:2, padding:"20px", marginBottom:24, textAlign:"center" }}>
             <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase", color:C.amber, marginBottom:8 }}>Up next</div>
             <div style={{ fontWeight:700, fontSize:16, color:C.white, marginBottom:2 }}>{nextEvent.eventName}</div>
-            <div style={{ fontSize:12, color:C.grey, marginBottom:16 }}>{nextEvent.eventDate}</div>
+            <div style={{ fontSize:14, fontWeight:700, color:C.greyLight, marginBottom:16 }}>{fmtRaceDate(nextEvent.eventDate)}</div>
             <div style={{ display:"flex", justifyContent:"center", gap:16 }}>
               {[[cd.weeks,"weeks"],[cd.days,"days"],[cd.hours,"hrs"]].map(function(part) {
                 return (
@@ -3420,10 +3497,10 @@ function MyEventsPage({ member, plannedEvents, onSave, allMembers }) {
                 return (
                   <div key={pe.eventId} style={{ background:isOpen?C.panel:C.bg, border:"1px solid "+(isOpen?C.red+"66":C.border), borderRadius:2, overflow:"hidden" }}>
                     <div onClick={function(){ toggleOpen(pe.eventId); }} style={{ padding:"14px 16px", cursor:"pointer" }}>
-                      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10 }}>
+                      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
+                        <DateTile dateStr={pe.eventDate}/>
                         <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ fontSize:11, color:C.greyDark, marginBottom:4 }}>{pe.eventDate}</div>
-                          <div style={{ fontWeight:700, fontSize:14, color:C.white }}>{pe.eventName}</div>
+                          <div style={{ fontWeight:700, fontSize:15, color:C.white, lineHeight:1.3 }}>{pe.eventName}</div>
                           {pe.note && <div style={{ fontSize:12, color:C.amber, marginTop:3, fontStyle:"italic" }}>{pe.note}</div>}
                         </div>
                         <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6, flexShrink:0 }}>
@@ -3435,6 +3512,7 @@ function MyEventsPage({ member, plannedEvents, onSave, allMembers }) {
                     </div>
                     {isOpen && (
                       <div style={{ borderTop:"1px solid "+C.border, padding:"12px 16px 16px" }}>
+                        <EventDetailBlock eventId={pe.eventId}/>
                         <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#3b82f6", marginBottom:8 }}>Who else is going</div>
                         {commits.length === 0 ? (
                           <div style={{ fontSize:13, color:C.greyDark }}>Just you so far.</div>
@@ -3443,7 +3521,7 @@ function MyEventsPage({ member, plannedEvents, onSave, allMembers }) {
                             {commits.map(function(c, i) {
                               return (
                                 <div key={i}>
-                                  <span style={{ fontWeight:700, fontSize:13, color:c.isMe?C.amber:C.white }}>{c.name}{c.isMe?" (you)":""}</span>
+                                  <span onClick={function(e){ e.stopPropagation(); setIdentityPopup(c); }} style={{ fontWeight:700, fontSize:13, color:c.isMe?C.amber:C.white, cursor:"pointer", textDecoration:"underline", textDecorationColor:"transparent" }}>{c.name}{c.isMe?" (you)":""}</span>
                                   {c.note && <span style={{ fontSize:12, color:"#93c5fd", fontStyle:"italic" }}> - {c.note}</span>}
                                 </div>
                               );
@@ -3462,8 +3540,8 @@ function MyEventsPage({ member, plannedEvents, onSave, allMembers }) {
 
       <div style={{ borderTop:"1px solid "+C.border, marginTop:32, paddingTop:32 }}>
         <span style={S.eyebrow}>Squad</span>
-        <h3 style={{ fontWeight:900, fontSize:"1.3rem", textTransform:"uppercase", marginBottom:4 }}>Squad Sign-Ups</h3>
-        <p style={{ color:C.grey, fontSize:13, marginBottom:20 }}>Events other swimmers have committed to - tap one to see who's in.</p>
+        <h3 style={{ fontWeight:900, fontSize:"1.3rem", textTransform:"uppercase", marginBottom:4 }}>Who's Racing</h3>
+        <p style={{ color:C.grey, fontSize:13, marginBottom:20 }}>Events other swimmers have committed to - tap one to see who's in and what it involves.</p>
         {squadEvents.length === 0 ? (
           <div style={{ background:C.panel, border:"1px solid "+C.border, borderRadius:2, padding:"20px", textAlign:"center", color:C.greyDark, fontSize:13 }}>No squad sign-ups yet.</div>
         ) : (
@@ -3473,10 +3551,10 @@ function MyEventsPage({ member, plannedEvents, onSave, allMembers }) {
               const commits = commitmentsFor(ev.eventId);
               return (
                 <div key={ev.eventId} style={{ background:isOpen?C.panel:C.bg, border:"1px solid "+(isOpen?C.red+"66":C.border), borderRadius:2, overflow:"hidden" }}>
-                  <div onClick={function(){ toggleSquadOpen(ev.eventId); }} style={{ padding:"14px 16px", cursor:"pointer", display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10 }}>
+                  <div onClick={function(){ toggleSquadOpen(ev.eventId); }} style={{ padding:"14px 16px", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
+                    <DateTile dateStr={ev.eventDate}/>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:11, color:C.greyDark, marginBottom:4 }}>{ev.eventDate}</div>
-                      <div style={{ fontWeight:700, fontSize:14, color:C.white }}>{ev.eventName}</div>
+                      <div style={{ fontWeight:700, fontSize:15, color:C.white, lineHeight:1.3 }}>{ev.eventName}</div>
                     </div>
                     <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6, flexShrink:0 }}>
                       <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:"#3b82f6" }}>{ev.count} committed</div>
@@ -3485,11 +3563,13 @@ function MyEventsPage({ member, plannedEvents, onSave, allMembers }) {
                   </div>
                   {isOpen && (
                     <div style={{ borderTop:"1px solid "+C.border, padding:"12px 16px 16px" }}>
+                      <EventDetailBlock eventId={ev.eventId}/>
+                      <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#3b82f6", marginBottom:8 }}>Who's in</div>
                       <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
                         {commits.map(function(c, i) {
                           return (
                             <div key={i}>
-                              <span style={{ fontWeight:700, fontSize:13, color:c.isMe?C.amber:C.white }}>{c.name}{c.isMe?" (you)":""}</span>
+                              <span onClick={function(e){ e.stopPropagation(); setIdentityPopup(c); }} style={{ fontWeight:700, fontSize:13, color:c.isMe?C.amber:C.white, cursor:"pointer", textDecoration:"underline", textDecorationColor:"transparent" }}>{c.name}{c.isMe?" (you)":""}</span>
                               {c.note && <span style={{ fontSize:12, color:"#93c5fd", fontStyle:"italic" }}> - {c.note}</span>}
                             </div>
                           );
@@ -3503,6 +3583,8 @@ function MyEventsPage({ member, plannedEvents, onSave, allMembers }) {
           </div>
         )}
       </div>
+
+      {identityPopup && <MemberIdentityCard name={identityPopup.fullName || identityPopup.name} nickname={identityPopup.nickname} photo={identityPopup.photo} onClose={function(){ setIdentityPopup(null); }}/>}
 
       <div style={{ borderTop:"1px solid "+C.border, marginTop:32, paddingTop:32 }}>
         <RaceSearch member={member} plannedEvents={plannedEvents} onSave={onSave} isCoach={false} allMembers={allMembers}/>
