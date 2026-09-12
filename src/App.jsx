@@ -1085,11 +1085,9 @@ function ProfileTab({ member, raceResults, sessionPacks, onUpdate, onSaveSetting
     if (!editable) return;
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-      onUpdate(Object.assign({}, member, { photo: ev.target.result }));
-    };
-    reader.readAsDataURL(file);
+    compressImageFile(file, 1600, 0.85).then(function(dataUrl) {
+      onUpdate(Object.assign({}, member, { photo: dataUrl }));
+    });
   }
   function removePhoto() {
     if (!editable) return;
@@ -2658,9 +2656,7 @@ function CakeYourMarksPage({ member, allMembers, allCoaches, bakes, isCoach, can
                   <input type="file" accept="image/*" onChange={function(e){
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = function(ev){ setAddForm(function(f){ return Object.assign({}, f, { photo: ev.target.result }); }); };
-                    reader.readAsDataURL(file);
+                    compressImageFile(file, 1600, 0.85).then(function(dataUrl){ setAddForm(function(f){ return Object.assign({}, f, { photo: dataUrl }); }); });
                   }} style={{ display:"none" }}/>
                   <span style={{ background:"transparent", border:"1px solid #333", color:"#bbb", padding:"9px 16px", fontWeight:700, fontSize:11, letterSpacing:"0.06em", textTransform:"uppercase", borderRadius:2, display:"inline-block" }}>{addForm.photo?"Change photo":"Upload photo"}</span>
                 </label>
@@ -2903,9 +2899,7 @@ function CakeYourMarksPage({ member, allMembers, allCoaches, bakes, isCoach, can
                         <input type="file" accept="image/*" onChange={function(e){
                           const file = e.target.files && e.target.files[0];
                           if (!file) return;
-                          const reader = new FileReader();
-                          reader.onload = function(ev){ onUpdateBakePhoto(bake.id, ev.target.result); };
-                          reader.readAsDataURL(file);
+                          compressImageFile(file, 1600, 0.85).then(function(dataUrl){ onUpdateBakePhoto(bake.id, dataUrl); });
                         }} style={{ display:"none" }}/>
                         <span style={{ background:"transparent", border:"1px solid #333", color:"#bbb", padding:"7px 14px", fontWeight:700, fontSize:10, letterSpacing:"0.06em", textTransform:"uppercase", borderRadius:2, display:"inline-block" }}>{bake.photo?"Change photo":"Add photo"}</span>
                       </label>
@@ -5290,11 +5284,9 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   function handleCoachPhotoChange(e) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-      api.updateCoachFields(currentCoach.id, { photo: ev.target.result }).then(refreshData).catch(function(err) { window.alert("Couldn't update photo: " + err.message); });
-    };
-    reader.readAsDataURL(file);
+    compressImageFile(file, 1600, 0.85).then(function(dataUrl) {
+      api.updateCoachFields(currentCoach.id, { photo: dataUrl }).then(refreshData).catch(function(err) { window.alert("Couldn't update photo: " + err.message); });
+    });
   }
   function removeCoachPhoto() {
     api.updateCoachFields(currentCoach.id, { photo: null }).then(refreshData).catch(function(err) { window.alert("Couldn't remove photo: " + err.message); });
@@ -7498,9 +7490,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                     <input type="file" accept="image/*" onChange={function(e){
                       const file = e.target.files && e.target.files[0];
                       if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = function(ev){ setShopItemForm(function(f){ return Object.assign({}, f, { photo: ev.target.result }); }); };
-                      reader.readAsDataURL(file);
+                      compressImageFile(file, 1600, 0.85).then(function(dataUrl){ setShopItemForm(function(f){ return Object.assign({}, f, { photo: dataUrl }); }); });
                     }} style={{ display:"none" }}/>
                     <span style={{ background:"transparent", border:"1px solid #333", color:"#bbb", padding:"9px 16px", fontWeight:700, fontSize:11, letterSpacing:"0.06em", textTransform:"uppercase", borderRadius:2, display:"inline-block" }}>{shopItemForm.photo?"Change photo":"Upload photo"}</span>
                   </label>
