@@ -8055,9 +8055,13 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
             <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:"#ff6b6b", marginBottom:8 }}>Account locked - payment needed</div>
             <div style={{ fontSize:14, color:C.white, lineHeight:1.6, marginBottom:10 }}>Hi {member.name.split(" ")[0]}, you attended a session that hasn't been paid for yet, so your account is locked until payment is confirmed.</div>
             {paymentLock.unpaidPacks.map(function(p) {
+              const dates = (p.allowedSessionIds||[]).map(function(sid) {
+                const s = (allData.sessions||[]).find(function(x){ return x.id === sid; });
+                return s ? fmtRaceDate(s.date) : null;
+              }).filter(Boolean);
               return (
                 <div key={p.id} style={{ fontSize:13, color:"#ffb4b4", lineHeight:1.6, marginBottom:4 }}>
-                  {"\u2022"} {p.allowedSessionIds ? p.sessionsTotal+" selected Fridays" : p.sessionsTotal+" session pack"} - {"\u00A3"}{(p.pricePaid!=null ? p.pricePaid : (p.pricePerSession*p.sessionsTotal)).toFixed(2)}
+                  {"\u2022"} {dates.length ? dates.join(", ") : p.sessionsTotal+" session pack"} - {"\u00A3"}{(p.pricePaid!=null ? p.pricePaid : (p.pricePerSession*p.sessionsTotal)).toFixed(2)}
                 </div>
               );
             })}
