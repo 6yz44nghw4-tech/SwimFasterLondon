@@ -10344,6 +10344,21 @@ function PublicSite({ onLogin, onApply, onJoinCommunity, blocks, sessions, disco
         </p>
       </section>
 
+      <section style={{ padding:"48px 20px", borderBottom:"1px solid "+C.border }}>
+        <span style={S.eyebrow}>See It In Action</span>
+        <h2 style={{ fontWeight:900, fontSize:"1.8rem", textTransform:"uppercase", marginBottom:24 }}>Your numbers, <span style={{ color:C.red }}>on every screen</span></h2>
+        <div style={{ display:"flex", flexDirection:"column", gap:16, maxWidth:960, margin:"0 auto" }}>
+          {[
+            ["promo-1-track-every-benchmark.jpg", "Progress chart on a laptop and a target-and-gap screen on a phone, showing a 100m freestyle time falling over 12 weeks"],
+            ["promo-2-know-your-gap.jpg", "Two phones showing the target time, gap to find and full benchmark history with splits and stroke counts"],
+            ["promo-3-count-down.jpg", "An iPad showing a race countdown and committed events, with a phone showing a logged open water race report"],
+            ["promo-4-all-in-one-place.jpg", "Three phones showing race countdowns, progress charts and target tracking in the Swim Faster London members' area"],
+          ].map(function(img) {
+            return <img key={img[0]} src={"/promo/"+img[0]} alt={img[1]} loading="lazy" decoding="async" width="1600" height="1000" style={{ width:"100%", height:"auto", display:"block", border:"1px solid "+C.border }}/>;
+          })}
+        </div>
+      </section>
+
       <footer style={{ padding:"28px 20px", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12 }}>
         <Logo height={45}/>
         <div style={{ display:"flex", alignItems:"center", gap:14 }}>
