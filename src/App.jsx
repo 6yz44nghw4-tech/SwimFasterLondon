@@ -340,6 +340,30 @@ function normalizeSwimTime(raw) {
   return mins + ":" + (remSec < 10 ? "0"+secStr : secStr);
 }
 
+// The coach only types the overall time and every length but the last; the
+// final length is just what's left, so work it out instead of asking for it.
+// Returns null (leave it blank) until the time and every earlier split are in
+// and they add up to less than the total.
+function autoLastSplit(totalStr, splits, numLengths) {
+  if (numLengths < 2) return null;
+  const total = toSeconds(normalizeSwimTime(totalStr));
+  if (!total || isNaN(total)) return null;
+  let sum = 0;
+  let decimals = (String(totalStr||"").split(".")[1]||"").length;
+  for (let i = 0; i < numLengths - 1; i++) {
+    const raw = splits && splits[i] ? String(splits[i]).trim() : "";
+    if (!raw) return null;
+    const v = toSeconds(raw);
+    if (isNaN(v)) return null;
+    sum += v;
+    decimals = Math.max(decimals, (raw.split(".")[1]||"").length);
+  }
+  const rem = total - sum;
+  if (rem <= 0) return null;
+  const str = rem.toFixed(Math.max(1, Math.min(decimals, 2)));
+  return rem >= 60 ? normalizeSwimTime(str) : str;
+}
+
 function fmtTime(s) {
   if (s >= 60) {
     const m = Math.floor(s / 60);
@@ -5129,7 +5153,11 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
     const normalizedTime = normalizeSwimTime(benchForm.time);
     const wantSplits = benchForm.detailLevel === "splits" || benchForm.detailLevel === "full";
     const wantStrokes = benchForm.detailLevel === "full";
-    const cleanSplits = wantSplits ? benchForm.splits.filter(function(s){ return s && s.trim(); }) : [];
+    const numLengths = Math.max(1, Math.round((parseInt((benchForm.event.match(/^(\d+)m/)||[])[1]) || 0)/50));
+    // The last length is never typed: it's the overall time minus the earlier splits.
+    const effectiveSplits = benchForm.splits.slice();
+    if (wantSplits && numLengths >= 2) effectiveSplits[numLengths-1] = autoLastSplit(normalizedTime, effectiveSplits, numLengths) || "";
+    const cleanSplits = wantSplits ? effectiveSplits.filter(function(s){ return s && s.trim(); }) : [];
     const cleanStrokes = wantStrokes ? benchForm.strokeCounts.filter(function(s){ return s && s.trim(); }).map(function(s){ return parseInt(s); }) : [];
     const member = data.members.find(function(m){ return m.id===mid; });
     const existing = member && (member.benchmarks||[]).find(function(b){ return b.event===benchForm.event && b.date===benchForm.date; });
@@ -5137,7 +5165,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
       date: benchForm.date,
       event: benchForm.event,
       time: normalizedTime,
-      splits: cleanSplits.length > 0 ? benchForm.splits.slice(0, Math.max(1, Math.round((parseInt((benchForm.event.match(/^(\d+)m/)||[])[1]) || 0)/50))) : null,
+      splits: cleanSplits.length > 0 ? effectiveSplits.slice(0, numLengths) : null,
       strokeCounts: cleanStrokes.length > 0 ? benchForm.strokeCounts.slice(0, Math.max(1, Math.round((parseInt((benchForm.event.match(/^(\d+)m/)||[])[1]) || 0)/50))).map(function(s){ return s ? parseInt(s) : null; }) : null,
       strokeCount1: (benchForm.event==="100m Free" && wantStrokes && benchForm.strokeCounts[0]) ? parseInt(benchForm.strokeCounts[0]) : null,
       strokeCount2: (benchForm.event==="100m Free" && wantStrokes && benchForm.strokeCounts[1]) ? parseInt(benchForm.strokeCounts[1]) : null,
@@ -5199,8 +5227,15 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
   function saveEditRecordedTime() {
     if (!lastRecordedBenchmark || !lastRecordedBenchmark.id) return;
     const normalized = normalizeSwimTime(recordedTimeDraft);
-    api.updateBenchmark(lastRecordedBenchmark.id, Object.assign({}, lastRecordedBenchmark.entry, { time:normalized })).then(refreshData).then(function() {
-      setLastRecordedBenchmark(function(lb) { return lb ? Object.assign({}, lb, { entry: Object.assign({}, lb.entry, { time:normalized }) }) : lb; });
+    // A corrected overall time changes what's left for the last length too.
+    const oldEntry = lastRecordedBenchmark.entry;
+    const patch = { time:normalized };
+    if (oldEntry.splits && oldEntry.splits.length >= 2) {
+      const last = autoLastSplit(normalized, oldEntry.splits, oldEntry.splits.length);
+      if (last) patch.splits = oldEntry.splits.slice(0, -1).concat([last]);
+    }
+    api.updateBenchmark(lastRecordedBenchmark.id, Object.assign({}, oldEntry, patch)).then(refreshData).then(function() {
+      setLastRecordedBenchmark(function(lb) { return lb ? Object.assign({}, lb, { entry: Object.assign({}, lb.entry, patch) }) : lb; });
       setEditingRecordedTime(false);
     }).catch(function(err) { window.alert("Couldn't save: " + err.message); });
   }
@@ -6952,10 +6987,19 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                     <label style={S.label}>{wantStrokes ? "50m splits + strokes per length" : "50m splits per length"}</label>
                     <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:12 }}>
                       {Array.from({length:numLengths}).map(function(_, i) {
+                        const isAutoLast = numLengths >= 2 && i === numLengths - 1;
+                        const autoValue = isAutoLast ? autoLastSplit(normalizeSwimTime(benchForm.time), benchForm.splits, numLengths) : null;
                         return (
                           <div key={i} style={{ display:"grid", gridTemplateColumns: wantStrokes ? "40px 1fr 1fr" : "40px 1fr", gap:8, alignItems:"center" }}>
                             <div style={{ fontSize:11, color:C.grey }}>L{i+1}</div>
-                            <input value={benchForm.splits[i]||""} onChange={function(e){ handleBenchSplitAt(i, e); }} placeholder="e.g. 28.9" style={S.input}/>
+                            {isAutoLast ? (
+                              <div style={Object.assign({}, S.input, { color: autoValue ? "#3b82f6" : C.greyDark, fontFamily:"monospace", fontWeight:700, display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 })}>
+                                <span>{autoValue || "fills in automatically"}</span>
+                                {autoValue && <span style={{ fontSize:9, letterSpacing:"0.08em", textTransform:"uppercase", color:C.grey, fontFamily:"inherit" }}>auto</span>}
+                              </div>
+                            ) : (
+                              <input value={benchForm.splits[i]||""} onChange={function(e){ handleBenchSplitAt(i, e); }} placeholder="e.g. 28.9" style={S.input}/>
+                            )}
                             {wantStrokes && <input value={benchForm.strokeCounts[i]||""} onChange={function(e){ handleBenchStrokeCountAt(i, e); }} placeholder="strokes" type="number" style={S.input}/>}
                           </div>
                         );
