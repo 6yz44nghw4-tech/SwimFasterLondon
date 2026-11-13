@@ -2137,6 +2137,16 @@ function blockProRataPrice(block, sessions, fromDateStr) {
   return { price: Math.round(price * 100) / 100, isMidway: isMidway, remaining: remaining, total: total };
 }
 
+// What a swimmer actually pays for a block today: the pro-rata price for the
+// sessions still to come, less any loyalty discount. The sign-up button used to
+// charge the full block price even partway through, so the figure on screen
+// and the one saved are both computed here.
+function blockSignupPrice(block, sessions, fromDateStr, loyaltyPercent) {
+  const pr = blockProRataPrice(block, sessions, fromDateStr);
+  const price = loyaltyPercent ? Math.round(pr.price * (1 - loyaltyPercent/100) * 100) / 100 : pr.price;
+  return { price: price, isMidway: pr.isMidway, remaining: pr.remaining, total: pr.total };
+}
+
 // A "Full Year" plan runs exactly one year from signup, which routinely lands
 // mid-block rather than lining up with a block boundary - that's expected.
 // This works out the resulting end date, and - if that end date falls before
@@ -2990,8 +3000,7 @@ function BlocksCalendarPage({ member, allData, onSignUp, onSetAttendanceIntent, 
   function toggleBlock(id) { setOpenBlockId(openBlockId === id ? null : id); }
 
   function discountedPrice(block) {
-    if (nextDiscountPercent === 0) return block.priceFull;
-    return Math.round(block.priceFull * (1 - nextDiscountPercent/100) * 100) / 100;
+    return blockSignupPrice(block, sessions, todayStr, nextDiscountPercent).price;
   }
 
   function requestSignup(block) { setConfirmSignupBlock(block); }
@@ -3248,8 +3257,16 @@ function BlocksCalendarPage({ member, allData, onSignUp, onSetAttendanceIntent, 
               )}
             </div>
             <div style={{ fontSize:12, color:C.grey, marginBottom:isEnrolled(currentBlock.id)?0:12 }}>{currentBlock.startDate} to {currentBlock.endDate}</div>
+            {!isEnrolled(currentBlock.id) && (function() {
+              const su = blockSignupPrice(currentBlock, sessions, todayStr, nextDiscountPercent);
+              return su.isMidway ? (
+                <div style={{ fontSize:11, color:"#3b82f6", marginBottom:12, marginTop:-6 }}>Pro-rata price - {su.remaining} of {su.total} sessions left in this block</div>
+              ) : null;
+            })()}
             {!isEnrolled(currentBlock.id) && (
-              hasActivePayAsYouGo ? (
+              blockSignupPrice(currentBlock, sessions, todayStr, 0).remaining === 0 ? (
+                <div style={{ fontSize:12, color:C.greyDark, lineHeight:1.6 }}>There are no sessions left in this block - sign up for the next one below.</div>
+              ) : hasActivePayAsYouGo ? (
                 <div style={{ fontSize:12, color:C.greyDark, lineHeight:1.6 }}>You have active pay-as-you-go sessions, so block sign-up isn't available until those are used up.</div>
               ) : confirmSignupBlock && confirmSignupBlock.id === currentBlock.id ? (
                 <div style={{ background:"#1a0a0a", border:"1px solid #7f1d1d", borderRadius:2, padding:"12px 14px", marginTop:8 }}>
@@ -7769,8 +7786,9 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
   function setInductionAck(next) { setInductionAckLocal(next); persistField("inductionAck", next); }
 
   function signUpForBlock(block, discountPercent) {
-    const finalPrice = discountPercent ? Math.round(block.priceFull * (1 - discountPercent/100) * 100) / 100 : block.priceFull;
-    const enrolment = { type:"block", blockId: block.id, blockLabel: block.label, pricePaid: finalPrice, discountCode: discountPercent ? "LOYALTY"+discountPercent : null, joinedMidway:false, signedUpDate: new Date().toISOString().slice(0,10), paymentStatus:"pending" };
+    const signup = blockSignupPrice(block, allData.sessions||[], new Date().toISOString().slice(0,10), discountPercent);
+    const finalPrice = signup.price;
+    const enrolment = { type:"block", blockId: block.id, blockLabel: block.label, pricePaid: finalPrice, discountCode: discountPercent ? "LOYALTY"+discountPercent : null, joinedMidway:signup.isMidway, signedUpDate: new Date().toISOString().slice(0,10), paymentStatus:"pending" };
     api.createBlockEnrolment(memberId, enrolment).then(refreshData).catch(function(err) { window.alert("Couldn't sign up for block: " + err.message); });
   }
 
