@@ -3076,7 +3076,7 @@ function BlocksCalendarPage({ member, allData, onSignUp, onSetAttendanceIntent, 
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10 }}>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:11, color:C.greyDark, marginBottom:2 }}>{fmtRaceDate(s.date)}</div>
-              <div style={{ fontWeight:700, fontSize:14, color:cancelled?C.greyDark:C.white, textDecoration:cancelled?"line-through":"none" }}>{s.focus || s.title}</div>
+              <div style={{ fontWeight:700, fontSize:14, color:cancelled?C.greyDark:C.white, textDecoration:cancelled?"line-through":"none" }}>{s.title}</div>
             </div>
             {cancelled ? (
               <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#ff6b6b", border:"1px solid #7f1d1d", padding:"2px 7px", borderRadius:1, flexShrink:0 }}>Cancelled</div>
@@ -3095,7 +3095,7 @@ function BlocksCalendarPage({ member, allData, onSignUp, onSetAttendanceIntent, 
         <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10, marginBottom:cancelled?0:8 }}>
           <div style={{ flex:1, minWidth:0 }}>
             <div style={{ fontSize:11, color:C.greyDark, marginBottom:2 }}>{fmtRaceDate(s.date)}</div>
-            <div style={{ fontWeight:700, fontSize:14, color:cancelled?C.greyDark:C.white, textDecoration:cancelled?"line-through":"none" }}>{s.focus || s.title}</div>
+            <div style={{ fontWeight:700, fontSize:14, color:cancelled?C.greyDark:C.white, textDecoration:cancelled?"line-through":"none" }}>{s.title}</div>
           </div>
           {cancelled && (
             <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#ff6b6b", border:"1px solid #7f1d1d", padding:"2px 7px", borderRadius:1, flexShrink:0 }}>Cancelled</div>
@@ -7176,7 +7176,7 @@ function CoachDashboard({ onLogout, sharedData, setSharedData, refreshData, coac
                           <select value={feedbackSessionId} onChange={function(e){ setFeedbackSessionId(e.target.value); }} style={S.input}>
                             <option value="" style={{ background:C.panel }}>Select session...</option>
                             {data.sessions.slice().sort(function(a,b) { return b.date.localeCompare(a.date); }).map(function(s) {
-                              return <option key={s.id} value={s.id} style={{ background:C.panel }}>{s.date} - {s.focus||s.title}</option>;
+                              return <option key={s.id} value={s.id} style={{ background:C.panel }}>{s.date} - {s.title}</option>;
                             })}
                           </select>
                         </div>
@@ -7924,7 +7924,7 @@ function MemberDashboard({ memberId, allData, setAllData, refreshData, onLogout,
     if (prefs.cancellations !== false) {
       (allData.sessions||[]).forEach(function(s) {
         if (s.status === "cancelled") {
-          items.push({ id:"cancel-"+s.id, icon:"Session cancelled", title:(s.focus||s.title)+" on "+s.date+" isn't running", detail:"", date:s.date, sortKey:s.date, color:"#ff6b6b" });
+          items.push({ id:"cancel-"+s.id, icon:"Session cancelled", title:s.title+" on "+s.date+" isn't running", detail:"", date:s.date, sortKey:s.date, color:"#ff6b6b" });
         }
       });
     }
@@ -9133,7 +9133,6 @@ function ApplicationForm({ onSubmit, blocks, sessions, discountCodes, initialVal
                                 </div>
                                 <div style={{ flex:1 }}>
                                   <div style={{ fontSize:13, color:"#fff", fontWeight:700 }}>{s.date}</div>
-                                  {s.focus && <div style={{ fontSize:11, color:"#888" }}>{s.focus}</div>}
                                 </div>
                               </div>
                             );
